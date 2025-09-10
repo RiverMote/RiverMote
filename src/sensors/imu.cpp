@@ -78,7 +78,7 @@ IMUAngles imu_read() {
     IMUAngles angles;
     quat_to_euler(&angles, q1, q2, q3, q0);
     // Save previous angles and return current angles
-    prevAngles = angles;
+    prevAngles = angles; 
     return angles;
 
 }

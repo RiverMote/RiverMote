@@ -8,8 +8,6 @@
 OneWire oneWire(PIN_TEMP);
 DallasTemperature temp(&oneWire);
 
-int count = 0;
-
 bool temp_init() {
     temp.begin();
     uint8_t devices = temp.getDeviceCount();

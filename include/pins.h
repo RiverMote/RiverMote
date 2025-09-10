@@ -1,12 +1,36 @@
 #pragma once
 
 // I2C sensor bus
-#define PIN_I2C_SDA 17
-#define PIN_I2C_SCL 16
+// wired
+#define PIN_I2C_SCL 16 // yel
+#define PIN_I2C_SDA 17 // blu
+//#define PIN_I2C_SDA 18 // blu
+//#define PIN_I2C_SCL 17 // yel
 #define I2C_FREQ 400000
 
 // OneWire bus for temperature sensor
-#define PIN_TEMP 1
+#define PIN_TEMP 18
+
+// Turbidity 
+#define PIN_TURBIDITY 1
+
+// TDS 
+#define PIN_TDS 2
+
+// H2O sensors
+#define PIN_H2O1 45
+#define PIN_H2O2 48
+#define PIN_H2O3 47
+
+// Light sensor 
+#define PIN_CDS 8 // blu
+// Flasher LED
+#define PIN_FLASHER 46 // wht (was 21)
+/*
+// Motor pins
+#define PIN_MOTOR1 35
+#define PIN_MOTOR2 36
+*/
 
 #define PIN_PMU_SDA 15
 #define PIN_PMU_SCL 7
