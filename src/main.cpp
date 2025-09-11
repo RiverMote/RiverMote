@@ -5,11 +5,12 @@
 #include "sensors/temp.h"
 #include "sensors/turbidity.h"
 #include "sensors/tds.h"
+#include "bluetooth.h"
+#include "flasher.h"
 #include "modem.h"
 #include "pins.h"
 #include "pmu.h"
 #include "sd.h"
-#include "flasher.h"
 
 #define WAIT_FOR_SERIAL 0
 #define WAIT_FOR_GPS_FIX 0
@@ -100,12 +101,20 @@ void setup() {
 		Serial.println("! imu init failed!");
 	}
 
-	// Initialize SD card
+	// SD card
 	Serial.println("Initializing sd card:");
 	if (sd_init()) {
 		Serial.println("- sd initialized");
 	} else {
 		Serial.println("! sd init failed!");
+	}
+
+	// Bluetooth
+	Serial.println("Initializing bluetooth:");
+	if (bluetooth_init()) {
+		Serial.println("- bluetooth initialized");
+	} else {
+		Serial.println("! bluetooth init failed!");
 	}
 
 	Serial.println("Ready!");

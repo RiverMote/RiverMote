@@ -12,7 +12,12 @@ int blinkState = 0;
 
 const int lightThreshold = 2500; // below this for dark
 
-void flash_beacon(){
+void flasher_init() {
+    pinMode(PIN_CDS, INPUT);
+    pinMode(PIN_FLASHER, OUTPUT);
+}
+
+void flash_beacon() {
     int lightLevel = analogRead(PIN_CDS); // get the light level
         
     if(lightLevel < lightThreshold) { 
