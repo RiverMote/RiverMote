@@ -2,9 +2,10 @@
 
 /**
  * Initialize communication with the SD card.
+ * @param format_on_fail if true, format and retry if initialization fails
  * @return true on success
  */
-bool sd_init();
+bool sd_init(bool format_on_fail = false);
 
 /**
  * Create a new log file and write an optional header.

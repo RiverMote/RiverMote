@@ -11,9 +11,9 @@
 static File logFile;
 static bool sdReady = false; // True if initialized and log file open
 
-bool sd_init() {
+bool sd_init(bool format_on_fail) {
     SD_MMC.setPins(PIN_SD_CLK, PIN_SD_CMD, PIN_SD_D0);
-    return SD_MMC.begin("/sdcard", true);
+    return SD_MMC.begin("/sdcard", true, format_on_fail);
 }
 
 bool sd_create_new(const String &filename, const char *header) {

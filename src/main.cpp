@@ -11,10 +11,8 @@
 #include "sd.h"
 #include "flasher.h"
 
-
 #define WAIT_FOR_SERIAL 0
 #define WAIT_FOR_GPS_FIX 0
-
 
 #define BUFF_SIZE 100
 
@@ -56,7 +54,6 @@ void setup() {
 		while (true) yield();
 	}
 	Serial.println("- pmu initialized");
-
 	
 	// Initialize modem
 	Serial.println("Initializing modem:");
@@ -65,10 +62,9 @@ void setup() {
 	} else {
 		Serial.println("! modem init failed!");
 	}
-	
 
 	// Flasher
-	flasher_init(); // nothing else to do
+	flasher_init();
 
 	// Enable GPS and wait for fix
 	Serial.println("enabling modem gps");
@@ -120,7 +116,4 @@ void loop() {
 	//long val[] = imu_read(); Serial.println(val(0));
 	//#define TEST_COORD 41.906334290146226 // 41.906334
 	//trim_gps(TEST_COORD);
-	
 }
-
-

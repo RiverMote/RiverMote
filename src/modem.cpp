@@ -16,7 +16,14 @@
     TinyGsm modem(Serial1);
 #endif
 
+// 1nce GPRS settings
+#define GPRS_APN "iot.1nce.net"
+#define GPRS_USER ""
+#define GPRS_PASS ""
+
 static bool gpsEnabled = false, gpsFixed = false;
+
+/* -- General modem functions -- */
 
 bool modem_init(unsigned long baud, uint max_retries) {
     // Initialize modem serial communication
@@ -42,7 +49,18 @@ bool modem_init(unsigned long baud, uint max_retries) {
     return retry < max_retries;
 }
 
+bool modem_send(const char *cmd, uint32_t timeout) {
+    modem.sendAT(cmd);
+    return modem.waitResponse(timeout) == 1;
+}
+
+/* -- GPS functions -- */
+
 bool modem_gps_enable() {
+    if (modem.isGprsConnected()) {
+        Serial.println("cell enabled, can't enable GPS");
+        return false;
+    }
     gpsEnabled = modem.enableGPS();
     return gpsEnabled;
 }
@@ -55,7 +73,7 @@ bool modem_gps_disable() {
     if (gpsEnabled) {
         gpsEnabled = !modem.disableGPS();
     }
-    return true; // Already disabled
+    return true;
 }
 
 ModemGPSData modem_gps_read() {
@@ -82,4 +100,90 @@ String modem_gps_read_time() {
 bool modem_gps_fixed() {
     (void)modem_gps_read();
     return gpsFixed;
+}
+
+/* -- Cellular functions -- */
+
+bool modem_cell_enable() {
+    if (gpsEnabled) {
+        Serial.println("GPS enabled, can't enable cell");
+        return false;
+    }
+    if (modem.getSimStatus() != SIM_READY) {
+        Serial.println("SIM not ready");
+        return false;
+    }
+
+    modem.setNetworkMode(38); // LTE only
+    modem.setPreferredMode(1); // Prefer CAT-M
+
+    // Register to network
+    Serial.print("registering to network (may take a moment)");
+    SIM70xxRegStatus status;
+    do {
+        status = modem.getRegistrationStatus();
+        if (status == REG_SEARCHING) {
+            Serial.print(".");
+        } else {
+            Serial.print("!");
+        }
+        delay(1000);
+    } while (status != REG_OK_HOME && status != REG_OK_ROAMING);
+    Serial.print("\nregistration status: ");
+    switch (status) {
+        case REG_UNREGISTERED: Serial.println("not registered"); break;
+        case REG_SEARCHING: Serial.println("searching"); break;
+        case REG_DENIED: Serial.println("denied"); break;
+        case REG_UNKNOWN: Serial.println("unknown"); break;
+        case REG_OK_HOME: Serial.println("registered (home)"); break;
+        case REG_OK_ROAMING: Serial.println("registered (roaming)"); break;
+        default: Serial.println("invalid"); break;
+    }
+    if (status != REG_OK_HOME && status != REG_OK_ROAMING) {
+        Serial.println("registration failed");
+        return false;
+    }
+
+    // Activate GPRS
+    Serial.print("activating gprs...");
+    if (!modem.gprsConnect(GPRS_APN, GPRS_USER, GPRS_PASS)) {
+        Serial.println("GPRS connection failed");
+        return false;
+    }
+    Serial.printf("activated! IP: %s, signal: %.2f\r\n", modem.getLocalIP().c_str(), modem.getSignalQuality() / 31.f);
+    
+    return true;
+}
+
+bool modem_cell_is_connected() {
+    return modem.isGprsConnected();
+}
+
+bool modem_cell_disable() {
+    if (modem.isGprsConnected()) {
+        return modem.gprsDisconnect();
+    }
+    return true;
+}
+
+/* -- SM (MQTT) functions -- */
+
+bool modem_get_smstate() {
+    modem.sendAT("+SMSTATE?");
+    if (modem.waitResponse("+SMSTATE: ")) {
+        String res = modem.stream.readStringUntil('\r');
+        return res.toInt();
+    }
+    return false;
+}
+
+bool modem_send_smpub(const char *cmd, const char *payload, size_t payload_len) {
+    modem.sendAT(cmd);
+    if (modem.waitResponse(">") == 1) {
+        modem.stream.write(payload, payload_len);
+        if (modem.waitResponse(3000)) {
+            return true;
+        }
+    }
+    return false;
 }
