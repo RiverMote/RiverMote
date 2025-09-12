@@ -23,11 +23,12 @@
 #define PIN_CDS 8 // blu
 // Flasher LED
 #define PIN_FLASHER 46 // wht (was 21)
-/*
 // Motor pins
-#define PIN_MOTOR1 35
-#define PIN_MOTOR2 36
-*/
+#define PIN_MOTOR_EN 9
+#define PIN_MOTOR1_FWD 11
+#define PIN_MOTOR1_REV 12
+#define PIN_MOTOR2_FWD 13
+#define PIN_MOTOR2_REV 14
 
 #define PIN_PMU_SDA 15
 #define PIN_PMU_SCL 7

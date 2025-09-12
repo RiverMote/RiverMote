@@ -32,7 +32,7 @@ static void parse_packet(const String &packet) {
     // Parse the button number and state
     int btn = packet.charAt(2) - '0'; // Number of button 1-8
     bool pressed = packet.charAt(3) == '1'; // True if pressed, false if released
-    int bit = btn > 0 ? (btn - 1) : 0; // Convert numbered button to bit index 0-7 (wrap 0 to bit 0)
+    int bit = 7 - (btn - 1); // Convert numbered button to bit index 7..0 
     // Set the corresponding bit in the pressed bitmask
     uint8_t mask = (1u << bit);
     if (pressed) {

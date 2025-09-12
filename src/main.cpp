@@ -8,6 +8,8 @@
 #include "bluetooth.h"
 #include "flasher.h"
 #include "modem.h"
+#include "motors.h"
+#include "mqtt.h"
 #include "pins.h"
 #include "pmu.h"
 #include "sd.h"
@@ -48,7 +50,7 @@ void setup() {
 #endif
 	Serial.println("Welcome to river mote!");
 
-	// Initialize PMU
+	// PMU
 	Serial.println("Initializing pmu:");
     if (!pmu_init()) {
 		Serial.println("! pmu init failed! halting.");
@@ -56,7 +58,7 @@ void setup() {
 	}
 	Serial.println("- pmu initialized");
 	
-	// Initialize modem
+	// Modem
 	Serial.println("Initializing modem:");
 	if (modem_init()) {
 		Serial.println("- modem initialized");
@@ -67,7 +69,8 @@ void setup() {
 	// Flasher
 	flasher_init();
 
-	// Enable GPS and wait for fix
+#if RIVERMOTE
+	// GPS
 	Serial.println("enabling modem gps");
 	if (modem_gps_enable()) {
 #if WAIT_FOR_GPS_FIX
@@ -82,6 +85,16 @@ void setup() {
 	} else {
 		Serial.println("modem gps enable failed!");
 	}
+#endif
+#if MINIMOTE
+	// Celluar
+	Serial.println("enabling modem cellular");
+	if (modem_cell_enable()) {
+		Serial.println("modem cellular enabled");
+	} else {
+		Serial.println("modem cellular enable failed!");
+	}
+#endif
 
 	// Initialize sensors
 	Serial.println("Initializing i2c bus:");
@@ -101,14 +114,7 @@ void setup() {
 		Serial.println("! imu init failed!");
 	}
 
-	// SD card
-	Serial.println("Initializing sd card:");
-	if (sd_init()) {
-		Serial.println("- sd initialized");
-	} else {
-		Serial.println("! sd init failed!");
-	}
-
+#if RIVERMOTE
 	// Bluetooth
 	Serial.println("Initializing bluetooth:");
 	if (bluetooth_init()) {
@@ -116,6 +122,31 @@ void setup() {
 	} else {
 		Serial.println("! bluetooth init failed!");
 	}
+
+	// Motors
+	Serial.println("Initializing motors:");
+	motors_init();
+	Serial.println("- motors initialized");
+#endif
+
+#if RIVERMOTE
+	// SD card
+	Serial.println("Initializing sd card:");
+	if (sd_init()) {
+		Serial.println("- sd initialized");
+	} else {
+		Serial.println("! sd init failed!");
+	}
+#endif
+#if MINIMOTE
+	// MQTT
+	Serial.println("Initializing mqtt:");
+	if (mqtt_init()) {
+		Serial.println("- mqtt initialized");
+	} else {
+		Serial.println("! mqtt init failed!");
+	}
+#endif
 
 	Serial.println("Ready!");
 }
@@ -125,4 +156,22 @@ void loop() {
 	//long val[] = imu_read(); Serial.println(val(0));
 	//#define TEST_COORD 41.906334290146226 // 41.906334
 	//trim_gps(TEST_COORD);
+
+#if RIVERMOTE
+	// Bluetooth motor control
+	uint8_t buttons = bluetooth_get_pressed();
+	if (buttons & 0b00001000) { // up
+		motors_set(255, 255);
+	} else if (buttons & 0b00000100) { // down
+		motors_set(-255, -255);
+	} else if (buttons & 0b00000010) { // left
+		motors_set(-255, 255);
+	} else if (buttons & 0b00000001) { // right
+		motors_set(255, -255);
+	} else {
+		motors_set(0, 0);
+	}
+#endif
+
+	delay(50);
 }
