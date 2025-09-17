@@ -17,7 +17,7 @@ bool sd_init(bool format_on_fail) {
 }
 
 bool sd_create_new(const String &filename, const char *header) {
-    logFile = SD_MMC.open(filename, FILE_WRITE);
+    logFile = SD_MMC.open("/" + filename, FILE_WRITE);
     if (!logFile) {
         return false;
     }

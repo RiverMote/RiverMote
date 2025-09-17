@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include "pins.h"
+#include "sensors/light.h"
 
 const int blinkInterval = 5000;
 const int blinkDuration = 75;
@@ -13,12 +14,12 @@ int blinkState = 0;
 const int lightThreshold = 2500; // below this for dark
 
 void flasher_init() {
-    pinMode(PIN_CDS, INPUT);
     pinMode(PIN_FLASHER, OUTPUT);
 }
 
-void flash_beacon() {
-    int lightLevel = analogRead(PIN_CDS); // get the light level
+void flash_beacon(){
+    //int lightLevel = analogRead(PIN_CDS); // get the light level
+    int lightLevel = check_cds();
         
     if(lightLevel < lightThreshold) { 
         if(millis()%blinkInterval == 0 && blinkState == 0) {

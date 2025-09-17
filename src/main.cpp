@@ -7,15 +7,20 @@
 #include "sensors/tds.h"
 #include "bluetooth.h"
 #include "flasher.h"
+#include "sensors/light.h"
 #include "modem.h"
 #include "motors.h"
 #include "mqtt.h"
 #include "pins.h"
 #include "pmu.h"
 #include "sd.h"
+#include "flasher.h"
+#include "debugging.h"
+
 
 #define WAIT_FOR_SERIAL 0
 #define WAIT_FOR_GPS_FIX 0
+
 
 #define BUFF_SIZE 100
 
@@ -50,22 +55,25 @@ void setup() {
 #endif
 	Serial.println("Welcome to river mote!");
 
-	// PMU
-	Serial.println("Initializing pmu:");
+	// Initialize PMU
+	Serial.print("Initializing pmu:");
     if (!pmu_init()) {
 		Serial.println("! pmu init failed! halting.");
 		while (true) yield();
 	}
 	Serial.println("- pmu initialized");
+
 	
-	// Modem
-	Serial.println("Initializing modem:");
+	// Initialize modem
+	Serial.print("Initializing modem:");
 	if (modem_init()) {
 		Serial.println("- modem initialized");
 	} else {
 		Serial.println("! modem init failed!");
 	}
-
+	
+	// light sensor
+	init_cds();
 	// Flasher
 	flasher_init();
 
@@ -97,17 +105,17 @@ void setup() {
 #endif
 
 	// Initialize sensors
-	Serial.println("Initializing i2c bus:");
+	Serial.print("Initializing i2c bus:");
 	Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_FREQ);
 	// Temperature sensor
-	Serial.println("Initializing temperature sensor:");
+	Serial.print("Initializing temperature sensor:");
 	if (temp_init()) {
 		Serial.println("- temperature sensor initialized");
 	} else {
 		Serial.println("! temperature sensor init failed!");
 	}
 	// IMU
-	Serial.println("Initializing imu:");
+	Serial.print("Initializing imu:");
 	if (imu_init()) {
 		Serial.println("- imu initialized");
 	} else {
@@ -147,9 +155,13 @@ void setup() {
 		Serial.println("! mqtt init failed!");
 	}
 #endif
+	sd_create_new("TEST");
 
 	Serial.println("Ready!");
 }
+
+long loopMillis;
+double sleepMinutes = 0.5;
 
 void loop() {
 	flash_beacon(); // beacon light
@@ -172,6 +184,20 @@ void loop() {
 		motors_set(0, 0);
 	}
 #endif
+	/*
+	if (millis() - loopMillis > (sleepMinutes* 60000)) {
+		debug_reporter();
+		loopMillis = millis();
+    }
+	*/
 
-	delay(50);
+	/*
+	int ll = check_cds(); // get light level
+	if(ll < 2500) {
+		Serial.println("Going to sleep now");
+  		delay(1000);
+	  	Serial.flush(); 
+  		esp_deep_sleep_start();
+	}
+	*/
 }

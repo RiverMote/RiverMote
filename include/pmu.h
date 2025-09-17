@@ -12,3 +12,4 @@ bool pmu_init();
  */
 
 int pmu_get_battery_percent();
+int pmu_get_battery_voltage();
