@@ -17,35 +17,11 @@
 #include "flasher.h"
 #include "debugging.h"
 
-
 #define WAIT_FOR_SERIAL 0
 #define WAIT_FOR_GPS_FIX 0
 
-
-#define BUFF_SIZE 100
-
-double avgBuffer[BUFF_SIZE];
-
-double getAverage(double new_val) {
-    // add new value to buffer
-    //buffer.pop();	
-    for(int i=BUFF_SIZE-1; i >= 1; i--) {
-        // shuffle everything right by 1
-        double curr_val = avgBuffer[i-1]; // move everything one to the left
-        avgBuffer[i] =  curr_val;
-    }
-    avgBuffer[0] = new_val; // add new val to the beginning of the array
-	
-    // get average 
-	double avg = 0;
-    double sum = 0;
-    for(int i=0; i < BUFF_SIZE; i++){
-		//val = avgBuffer[i];
-        sum = sum + avgBuffer[i];
-        avg = sum/BUFF_SIZE;
-    }
-    return avg; 
-}
+#define LOG_INTERVAL 500 // ms between log entries
+#define LOG_HEADER "Time,Batt%,BattV,Lat,Lng,Speed,Track,Temp,Turbidity,TDS"
 
 void setup() {
     Serial.begin(115200);
@@ -63,49 +39,6 @@ void setup() {
 	}
 	Serial.println("- pmu initialized");
 
-	
-	// Initialize modem
-	Serial.print("Initializing modem:");
-	if (modem_init()) {
-		Serial.println("- modem initialized");
-	} else {
-		Serial.println("! modem init failed!");
-	}
-	
-	// light sensor
-	init_cds();
-	// Flasher
-	flasher_init();
-
-#if RIVERMOTE
-	// GPS
-	Serial.println("enabling modem gps");
-	if (modem_gps_enable()) {
-#if WAIT_FOR_GPS_FIX
-		Serial.print("modem gps enabled, waiting for fix");
-		while (!modem_gps_fixed()) {
-			Serial.print(".");
-			delay(1000);
-		}
-#else
-		Serial.println("modem gps enabled");
-#endif
-	} else {
-		Serial.println("modem gps enable failed!");
-	}
-#endif
-#if MINIMOTE
-	// Celluar
-	Serial.println("enabling modem cellular");
-	if (modem_cell_enable()) {
-		Serial.println("modem cellular enabled");
-	} else {
-		Serial.println("modem cellular enable failed!");
-	}
-#endif
-
-	// Initialize sensors
-	Serial.print("Initializing i2c bus:");
 	Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_FREQ);
 	// Temperature sensor
 	Serial.print("Initializing temperature sensor:");
@@ -135,9 +68,7 @@ void setup() {
 	Serial.println("Initializing motors:");
 	motors_init();
 	Serial.println("- motors initialized");
-#endif
 
-#if RIVERMOTE
 	// SD card
 	Serial.println("Initializing sd card:");
 	if (sd_init()) {
@@ -145,7 +76,15 @@ void setup() {
 	} else {
 		Serial.println("! sd init failed!");
 	}
-#endif
+	// Create new data file
+#if WAIT_FOR_GPS_FIX
+	// We have a gps fix, so we can use gps time to name the file
+	sd_create_new("data_" + modem_gps_read_time() + ".csv", LOG_HEADER);
+#else
+	// No gps fix, so just use a default name
+	sd_create_new("data.csv", LOG_HEADER);
+#endif // WAIT_FOR_GPS_FIX
+#endif // RIVERMOTE
 #if MINIMOTE
 	// MQTT
 	Serial.println("Initializing mqtt:");
@@ -155,20 +94,17 @@ void setup() {
 		Serial.println("! mqtt init failed!");
 	}
 #endif
-	sd_create_new("TEST");
 
 	Serial.println("Ready!");
 }
 
+/*
 long loopMillis;
 double sleepMinutes = 0.5;
+*/
 
 void loop() {
 	flash_beacon(); // beacon light
-	//long val[] = imu_read(); Serial.println(val(0));
-	//#define TEST_COORD 41.906334290146226 // 41.906334
-	//trim_gps(TEST_COORD);
-
 #if RIVERMOTE
 	// Bluetooth motor control
 	uint8_t buttons = bluetooth_get_pressed();
@@ -183,7 +119,26 @@ void loop() {
 	} else {
 		motors_set(0, 0);
 	}
+
+	// If enough time has passed from last log...
+	static unsigned long lastLog = 0;
+	if (millis() - lastLog > LOG_INTERVAL) {
+		// Read sensors
+		String time = modem_gps_read_time();
+		ModemGPSData gps = modem_gps_read();
+		float temperature = temp_read();
+		float turbidity = get_turbidity();
+		float tds = get_tds();
+		// Log to sd and bluetooth
+		sd_appendf("%s,%d,%d,%.6f,%.6f,%.2f,%.2f,%.2f,%.4f,%.4f", 
+			time.c_str(), pmu_get_battery_percent(), pmu_get_battery_voltage(),
+			gps.lat, gps.lng, gps.speed, gps.track,
+			temperature, turbidity, tds);
+		bluetooth_printf("%dV %d%%\n", pmu_get_battery_voltage(), pmu_get_battery_percent());
+		lastLog = millis();
+	}
 #endif
+
 	/*
 	if (millis() - loopMillis > (sleepMinutes* 60000)) {
 		debug_reporter();
@@ -200,4 +155,6 @@ void loop() {
   		esp_deep_sleep_start();
 	}
 	*/
+
+	delay(50);
 }

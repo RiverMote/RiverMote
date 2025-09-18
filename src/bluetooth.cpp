@@ -1,4 +1,5 @@
 #include <NimBLEDevice.h>
+#include <stdarg.h>
 
 #include "bluetooth.h"
 
@@ -6,6 +7,7 @@
 #define UUID_NUS_SERVICE "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define UUID_NUS_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define UUID_NUS_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+#define FORMAT_BUFFER_SIZE 512 // Buffer size for bluetooth_printf
 
 static NimBLEServer *server = nullptr;
 static NimBLECharacteristic *serverRx = nullptr, *serverTx = nullptr;
@@ -107,5 +109,22 @@ bool bluetooth_init() {
 
 uint8_t bluetooth_get_pressed() {
 	return pressedMask;
+}
+
+bool bluetooth_printf(const char *fmt, ...) {
+    if (!serverTx || server->getConnectedCount() == 0) {
+        return false; // No connection or TX not ready
+    }
+    // Format the string into a buffer
+    char buf[FORMAT_BUFFER_SIZE];
+    va_list args; va_start(args, fmt);
+    int len = vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    // Send the formatted string as a notification
+    if (len > 0 && len < (int)sizeof(buf)) {
+        serverTx->setValue((uint8_t*)buf, len);
+        return serverTx->notify();
+    }
+    return false;
 }
  

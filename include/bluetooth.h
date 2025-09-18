@@ -14,3 +14,9 @@ bool bluetooth_init();
  * @return 8-bit bitmask where 1 means pressed
  */
 uint8_t bluetooth_get_pressed();
+
+/**
+ * Send a printf-style formatted string via BLE notification to the connected device.
+ * @return true on success
+ */
+bool bluetooth_printf(const char *format, ...);
