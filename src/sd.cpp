@@ -37,11 +37,11 @@ bool sd_init(bool format_on_fail) {
 
 bool sd_create_new(const char *header) {
     String filename = sd_next_filename();
-    dataFile = SD_MMC.open("/" + filename, FILE_WRITE);
+    dataFile = SD_MMC.open(filename, FILE_WRITE);
     if (!dataFile) {
         return false;
     }
-    Serial.printf("logging to %s\n", filename);
+    Serial.printf("logging to %s\n", filename.c_str());
 
     // Write header if applicable
     if (header) {
@@ -68,9 +68,6 @@ bool sd_append(const char *line) {
 }
 
 bool sd_appendf(const char *fmt, ...) {
-    if (!sdReady || !dataFile) {
-        return false;
-    }
     char buf[FORMAT_BUFFER_SIZE];
     va_list ap; va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);

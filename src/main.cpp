@@ -155,11 +155,11 @@ void loop() {
 		float turbidity = get_turbidity();
 		float tds = get_tds();
 		// Log to sd and bluetooth
-		sd_appendf("%s,%d,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.4f,%.4f", 
+		sd_appendf("%lu,%s,%d,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.4f,%.4f", 
 			millis(), time.c_str(), pmu_get_battery_percent(), pmu_get_battery_voltage(),
 			gps.lat, gps.lng, gps.speed, gps.track,
 			temperature, turbidity, tds);
-		bluetooth_printf("%.3fV %d%%\n", pmu_get_battery_voltage(), pmu_get_battery_percent());
+		bluetooth_printf("%.3fV %d%% %.2fC\n", pmu_get_battery_voltage(), pmu_get_battery_percent(), temperature);
 		lastLog = millis();
 	}
 #endif
