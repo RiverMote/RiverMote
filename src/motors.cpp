@@ -25,8 +25,10 @@ void motors_init() {
     ledcAttachPin(PIN_MOTOR2_REV, CHAN_MOTOR2_REV);
     // Enable motors
     motors_set(0, 0);
-    pinMode(PIN_MOTOR_EN, OUTPUT);
-    digitalWrite(PIN_MOTOR_EN, HIGH);
+    pinMode(PIN_MOTOR1_EN, OUTPUT);
+    pinMode(PIN_MOTOR2_EN, OUTPUT);
+    digitalWrite(PIN_MOTOR1_EN, HIGH);
+    digitalWrite(PIN_MOTOR2_EN, HIGH);
 }
 
 void motors_set(int16_t motor1, int16_t motor2) {

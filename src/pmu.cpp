@@ -80,14 +80,14 @@ int pmu_get_battery_percent() {
     return pmu.getBatteryPercent();
 }
 
-int pmu_get_battery_voltage() {
+float pmu_get_battery_voltage() {
     /*
     Serial.print("getBattVoltage:"); Serial.print(PMU.getBattVoltage()); Serial.println("mV");
     Serial.print("getVbusVoltage:"); Serial.print(PMU.getVbusVoltage()); Serial.println("mV");
     Serial.print("getSystemVoltage:"); Serial.print(PMU.getSystemVoltage()); Serial.println("mV");
     */
-   if (!pmu.isBatteryConnect()) {
-        return -1;
+    if (!pmu.isBatteryConnect()) {
+        return -1.f;
     }
-    return pmu.getBattVoltage();
-    }
+    return pmu.getBattVoltage() / 1000.f;
+}

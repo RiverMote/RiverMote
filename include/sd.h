@@ -9,11 +9,10 @@ bool sd_init(bool format_on_fail = false);
 
 /**
  * Create a new log file and write an optional header.
- * @param filename name of the file to create
  * @param header header row to write, or `nullptr` for no header
  * @return true on success
  */
-bool sd_create_new(const String &filename, const char *header = nullptr);
+bool sd_create_new(const char *header = nullptr);
 
 /**
  * @return true if SD initialized and log file open ready

@@ -18,10 +18,9 @@
 #include "debugging.h"
 
 #define WAIT_FOR_SERIAL 0
-#define WAIT_FOR_GPS_FIX 0
 
 #define LOG_INTERVAL 500 // ms between log entries
-#define LOG_HEADER "Time,Batt%,BattV,Lat,Lng,Speed,Track,Temp,Turbidity,TDS"
+#define LOG_HEADER "Millis,Time,Batt%,BattV,Lat,Lng,Speed,Track,Temp,Turbidity,TDS"
 
 void setup() {
     Serial.begin(115200);
@@ -39,7 +38,39 @@ void setup() {
 	}
 	Serial.println("- pmu initialized");
 
+	// Initialize modem
+	Serial.print("Initializing modem:");
+	if (modem_init()) {
+		Serial.println("- modem initialized");
+	} else {
+		Serial.println("! modem init failed!");
+	}
+
+#if RIVERMOTE
+	// GPS
+	Serial.println("enabling modem gps");
+	if (modem_gps_enable()) {
+		Serial.println("modem gps enabled");
+	} else {
+		Serial.println("modem gps enable failed!");
+	}
+#endif
+#if MINIMOTE
+	// Celluar
+	Serial.println("enabling modem cellular");
+	if (modem_cell_enable()) {
+		Serial.println("modem cellular enabled");
+	} else {
+		Serial.println("modem cellular enable failed!");
+	}
+#endif
+
+	// Initialize sensors
 	Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_FREQ);
+	// light sensor
+	init_cds();
+	// Flasher
+	flasher_init();
 	// Temperature sensor
 	Serial.print("Initializing temperature sensor:");
 	if (temp_init()) {
@@ -77,13 +108,7 @@ void setup() {
 		Serial.println("! sd init failed!");
 	}
 	// Create new data file
-#if WAIT_FOR_GPS_FIX
-	// We have a gps fix, so we can use gps time to name the file
-	sd_create_new("data_" + modem_gps_read_time() + ".csv", LOG_HEADER);
-#else
-	// No gps fix, so just use a default name
-	sd_create_new("data.csv", LOG_HEADER);
-#endif // WAIT_FOR_GPS_FIX
+	sd_create_new(LOG_HEADER);
 #endif // RIVERMOTE
 #if MINIMOTE
 	// MQTT
@@ -130,11 +155,11 @@ void loop() {
 		float turbidity = get_turbidity();
 		float tds = get_tds();
 		// Log to sd and bluetooth
-		sd_appendf("%s,%d,%d,%.6f,%.6f,%.2f,%.2f,%.2f,%.4f,%.4f", 
-			time.c_str(), pmu_get_battery_percent(), pmu_get_battery_voltage(),
+		sd_appendf("%s,%d,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.4f,%.4f", 
+			millis(), time.c_str(), pmu_get_battery_percent(), pmu_get_battery_voltage(),
 			gps.lat, gps.lng, gps.speed, gps.track,
 			temperature, turbidity, tds);
-		bluetooth_printf("%dV %d%%\n", pmu_get_battery_voltage(), pmu_get_battery_percent());
+		bluetooth_printf("%.3fV %d%%\n", pmu_get_battery_voltage(), pmu_get_battery_percent());
 		lastLog = millis();
 	}
 #endif

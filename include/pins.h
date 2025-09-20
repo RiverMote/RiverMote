@@ -6,13 +6,13 @@
 #define I2C_FREQ 400000
 
 // OneWire bus for temperature sensor
-#define PIN_TEMP 18
+#define PIN_TEMP 2
 
 // Turbidity 
 #define PIN_TURBIDITY 1
 
 // TDS 
-#define PIN_TDS 2
+#define PIN_TDS 10
 
 // H2O sensors
 #define PIN_H2O1 45
@@ -22,9 +22,10 @@
 // Light sensor 
 #define PIN_CDS 8 // blu
 // Flasher LED
-#define PIN_FLASHER 46 // wht (was 21)
+#define PIN_FLASHER 18 // wht
 // Motor pins
-#define PIN_MOTOR_EN 9
+#define PIN_MOTOR1_EN 46
+#define PIN_MOTOR2_EN 9
 #define PIN_MOTOR1_FWD 11
 #define PIN_MOTOR1_REV 12
 #define PIN_MOTOR2_FWD 13

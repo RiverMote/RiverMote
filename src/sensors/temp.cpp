@@ -7,7 +7,7 @@
 
 OneWire oneWire(PIN_TEMP);
 DallasTemperature temp(&oneWire);
-static bool conversionPending = false;
+static unsigned long requestedAt = 0; // Time when temperature conversion was requested
 static float lastTemp = 0.f;
 
 bool temp_init() {
@@ -15,16 +15,22 @@ bool temp_init() {
     temp.setWaitForConversion(false); // Set non-blocking
     uint8_t devices = temp.getDeviceCount();
     Serial.printf("found %d temperature devices\n", devices);
+    if (devices > 0) {
+        temp.requestTemperatures(); // Request initial temperature reading
+        requestedAt = millis();
+    }
     return devices > 0;
 }
 
 float temp_read() {
-    if (temp.isConversionComplete()) {
+    if (temp.getDeviceCount() == 0) {
+        return 0.f; // No devices to read from
+    }
+
+    if (millis() - requestedAt > temp.millisToWaitForConversion()) {
         lastTemp = temp.getTempCByIndex(0);
-        conversionPending = false;
-    } else if (!conversionPending) {
         temp.requestTemperatures();
-        conversionPending = true;
+        requestedAt = millis();
     }
     return lastTemp;
 }
