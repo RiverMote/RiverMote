@@ -6,6 +6,7 @@
 #include "sensors/turbidity.h"
 #include "sensors/tds.h"
 #include "bluetooth.h"
+#include "control.h"
 #include "flasher.h"
 #include "sensors/light.h"
 #include "modem.h"
@@ -132,18 +133,7 @@ void loop() {
 	flash_beacon(); // beacon light
 #if RIVERMOTE
 	// Bluetooth motor control
-	uint8_t buttons = bluetooth_get_pressed();
-	if (buttons & 0b00001000) { // up
-		motors_set(255, 255);
-	} else if (buttons & 0b00000100) { // down
-		motors_set(-255, -255);
-	} else if (buttons & 0b00000010) { // left
-		motors_set(-255, 255);
-	} else if (buttons & 0b00000001) { // right
-		motors_set(255, -255);
-	} else {
-		motors_set(0, 0);
-	}
+	control_handle_input(bluetooth_get_pressed());
 
 	// If enough time has passed from last log...
 	static unsigned long lastLog = 0;
@@ -159,7 +149,7 @@ void loop() {
 			millis(), time.c_str(), pmu_get_battery_percent(), pmu_get_battery_voltage(),
 			gps.lat, gps.lng, gps.speed, gps.track,
 			temperature, turbidity, tds);
-		bluetooth_printf("%.3fV %d%% %.2fC\n", pmu_get_battery_voltage(), pmu_get_battery_percent(), temperature);
+		bluetooth_printf("%.3fV %d%% %.0f%%\n", pmu_get_battery_voltage(), pmu_get_battery_percent(), motors_get_max_speed() * 100);
 		lastLog = millis();
 	}
 #endif

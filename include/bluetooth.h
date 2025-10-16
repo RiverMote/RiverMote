@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define LOG_BLUETOOTH 0 // Duplicate all sent and recieved bluetooth data to serial for debugging
 
 /**

@@ -12,6 +12,8 @@
 #define CHAN_MOTOR2_FWD 2
 #define CHAN_MOTOR2_REV 3
 
+static float maxSpeed = 0.5f; // Max speed as fraction of full (0.0 to 1.0)
+
 void motors_init() {
     // Create 4 PWM channels for 2 motors (forward and reverse for each)
     ledcSetup(CHAN_MOTOR1_FWD, MOTORS_FREQ, MOTORS_RES);
@@ -33,8 +35,8 @@ void motors_init() {
 
 void motors_set(int16_t motor1, int16_t motor2) {
     // Take the absolute value of each motor speed and constrain to MOTORS_RES
-    uint8_t speed1 = constrain(abs(motor1), 0, 255);
-    uint8_t speed2 = constrain(abs(motor2), 0, 255);
+    uint8_t speed1 = constrain(abs(motor1), 0, 255 * maxSpeed);
+    uint8_t speed2 = constrain(abs(motor2), 0, 255 * maxSpeed);
 
     // Motor 1
     if (motor1 > 0) {
@@ -61,4 +63,12 @@ void motors_set(int16_t motor1, int16_t motor2) {
         ledcWrite(CHAN_MOTOR2_FWD, 0);
         ledcWrite(CHAN_MOTOR2_REV, 0);
     }
+}
+
+float motors_get_max_speed() {
+    return maxSpeed;
+}
+
+void motors_set_max_speed(float speed) {
+    maxSpeed = constrain(speed, 0.0f, 1.0f);
 }

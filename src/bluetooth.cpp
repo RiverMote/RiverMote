@@ -127,4 +127,3 @@ bool bluetooth_printf(const char *fmt, ...) {
     }
     return false;
 }
- 
