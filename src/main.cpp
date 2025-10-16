@@ -149,7 +149,9 @@ void loop() {
 			millis(), time.c_str(), pmu_get_battery_percent(), pmu_get_battery_voltage(),
 			gps.lat, gps.lng, gps.speed, gps.track,
 			temperature, turbidity, tds);
-		bluetooth_printf("%.3fV %d%% %.0f%%\n", pmu_get_battery_voltage(), pmu_get_battery_percent(), motors_get_max_speed() * 100);
+		bluetooth_printf("%.3fV %d%% %.0f%%, %s\n",
+						 pmu_get_battery_voltage(), pmu_get_battery_percent(),
+						 motors_get_max_speed() * 100, modem_gps_fixed() ? "GPS FIX" : "NO FIX");
 		lastLog = millis();
 	}
 #endif
