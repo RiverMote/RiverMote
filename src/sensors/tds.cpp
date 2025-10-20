@@ -64,12 +64,16 @@ float get_tds()
       printTimepoint = millis();
       for(copyIndex=0;copyIndex<SCOUNT;copyIndex++)
         analogBufferTemp[copyIndex]= analogBuffer[copyIndex];
+
+      /* from the forum: 3V3 quadratic equation:
+      y = -2572.2x² + 8700.5x - 4352.9
+      */
       
       //averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 1024.0; // read the analog value more stable by the median filtering algorithm, and convert to voltage value
-      // -- should read actual ADC ref here -- //
       averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 4095.0; // changed to 4096 (2^12) for Particle M-core 
-      float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
       // -- should use actual water temp here -- //
+      float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+      // -- should read actual ADC ref here -- //
       float compensationVolatge=averageVoltage/compensationCoefficient;  //temperature compensation
       //tdsValue=(133.42*compensationVolatge*compensationVolatge*compensationVolatge - 255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5; //convert voltage value to tds value
       tdsValue=(133.42* pow(compensationVolatge,3)- 255.86* pow(compensationVolatge, 2) + 857.39*compensationVolatge)*0.5; //convert voltage value to tds value

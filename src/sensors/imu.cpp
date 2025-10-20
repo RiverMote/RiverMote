@@ -1,8 +1,6 @@
 #include <ICM_20948.h>
 #include <math.h>
 
-#include "pins.h"
-
 #include "sensors/imu.h"
 
 ICM_20948_I2C icm;
@@ -80,5 +78,4 @@ IMUAngles imu_read() {
     // Save previous angles and return current angles
     prevAngles = angles; 
     return angles;
-
 }

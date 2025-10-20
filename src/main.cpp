@@ -8,7 +8,9 @@
 #include "bluetooth.h"
 #include "control.h"
 #include "flasher.h"
+#include "sensors/compass.h"
 #include "sensors/light.h"
+#include "sensors/spectral.h"
 #include "modem.h"
 #include "motors.h"
 #include "mqtt.h"
@@ -20,8 +22,8 @@
 
 #define WAIT_FOR_SERIAL 0
 
-#define LOG_INTERVAL 500 // ms between log entries
-#define LOG_HEADER "Millis,Time,Batt%,BattV,Lat,Lng,Speed,Track,Temp,Turbidity,TDS"
+#define LOG_INTERVAL 1000 // ms between log entries
+#define LOG_HEADER "Millis,Time,Batt%,BattV,Lat,Lng,Speed,Track,Heading,Temp,Turbidity,TDS,SpecViolet,SpecBlue,SpecGreen,SpecYellow,SpecOrange,SpecRed"
 
 void setup() {
     Serial.begin(115200);
@@ -79,12 +81,26 @@ void setup() {
 	} else {
 		Serial.println("! temperature sensor init failed!");
 	}
+	// Spectral
+	Serial.print("Initializing compass:");
+	if (compass_init()) {
+		Serial.println("- compass initialized");
+	} else {
+		Serial.println("! compass init failed!");
+	}
 	// IMU
 	Serial.print("Initializing imu:");
 	if (imu_init()) {
 		Serial.println("- imu initialized");
 	} else {
 		Serial.println("! imu init failed!");
+	}
+	// Spectral
+	Serial.print("Initializing spectral:");
+	if (spectral_init()) {
+		Serial.println("- spectral initialized");
+	} else {
+		Serial.println("! spectral init failed!");
 	}
 
 #if RIVERMOTE
@@ -144,11 +160,13 @@ void loop() {
 		float temperature = temp_read();
 		float turbidity = get_turbidity();
 		float tds = get_tds();
+		SpectralData spectral = get_spectrum();
 		// Log to sd and bluetooth
-		sd_appendf("%lu,%s,%d,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.4f,%.4f", 
+		sd_appendf("%lu,%s,%d,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", 
 			millis(), time.c_str(), pmu_get_battery_percent(), pmu_get_battery_voltage(),
-			gps.lat, gps.lng, gps.speed, gps.track,
-			temperature, turbidity, tds);
+			gps.lat, gps.lng, gps.speed, gps.track, compass_read(),
+			temperature, turbidity, tds,
+			spectral.violet, spectral.blue, spectral.green, spectral.yellow, spectral.orange, spectral.red);
 		bluetooth_printf("%.3fV %d%% %.0f%%, %s\n",
 						 pmu_get_battery_voltage(), pmu_get_battery_percent(),
 						 motors_get_max_speed() * 100, modem_gps_fixed() ? "GPS FIX" : "NO FIX");

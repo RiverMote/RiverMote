@@ -12,7 +12,7 @@
 #define CHAN_MOTOR2_FWD 2
 #define CHAN_MOTOR2_REV 3
 
-static float maxSpeed = 0.5f; // Max speed as fraction of full (0.0 to 1.0)
+static float maxSpeed = 0.f; // Max speed as fraction of full (0.0 to 1.0)
 
 void motors_init() {
     // Create 4 PWM channels for 2 motors (forward and reverse for each)
