@@ -96,6 +96,7 @@ void setup() {
 	} else {
 		Serial.println("! imu init failed!");
 	}
+#if RIVERMOTE
 	// Spectral
 	Serial.print("Initializing spectral:");
 	if (spectral_init()) {
@@ -103,15 +104,16 @@ void setup() {
 	} else {
 		Serial.println("! spectral init failed!");
 	}
+#endif // RIVERMOTE
 #if MINIMOTE
-	// Particulate matter]
+	// Particulate matter
 	Serial.print("Initializing particulate matter sensor:");
 	if (pm_init()) {
 		Serial.println("- pm sensor initialized");
 	} else {
 		Serial.println("! pm sensor init failed!");
 	}
-#endif
+#endif // MINIMOTE
 
 #if RIVERMOTE
 	// Bluetooth
