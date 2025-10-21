@@ -1,8 +1,22 @@
 #pragma once
 
+#if RIVERMOTE
+
 #include <stdint.h>
 
 #define LOG_BLUETOOTH 0 // Duplicate all sent and recieved bluetooth data to serial for debugging
+
+// Button masks for the Bluetooth Control Pad
+typedef enum BluetoothButton {
+	BTN_1 = 0b10000000, // Decrease speed
+	BTN_2 = 0b01000000, // Increase speed
+	BTN_3 = 0b00100000, // Toggle autonomous mode
+	BTN_4 = 0b00010000, // Unused
+	BTN_UP = 0b00001000,
+	BTN_DOWN = 0b00000100,
+	BTN_LEFT = 0b00000010,
+	BTN_RIGHT = 0b00000001,
+} BluetoothButton;
 
 /**
  * Initialize BLE control (connect via Adafruit Bluefruit).
@@ -22,3 +36,5 @@ uint8_t bluetooth_get_pressed();
  * @return true on success
  */
 bool bluetooth_printf(const char *format, ...);
+
+#endif // RIVERMOTE

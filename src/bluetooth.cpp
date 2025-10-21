@@ -1,7 +1,9 @@
+#include "bluetooth.h"
+
+#if RIVERMOTE
+
 #include <NimBLEDevice.h>
 #include <stdarg.h>
-
-#include "bluetooth.h"
 
 // Nordic UART Service (NUS) UUIDs used by Bluefruit app
 #define UUID_NUS_SERVICE "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -127,3 +129,5 @@ bool bluetooth_printf(const char *fmt, ...) {
     }
     return false;
 }
+
+#endif // RIVERMOTE

@@ -10,6 +10,7 @@
 #include "flasher.h"
 #include "sensors/compass.h"
 #include "sensors/light.h"
+#include "sensors/pm_sensor.h"
 #include "sensors/spectral.h"
 #include "modem.h"
 #include "motors.h"
@@ -81,7 +82,7 @@ void setup() {
 	} else {
 		Serial.println("! temperature sensor init failed!");
 	}
-	// Spectral
+	// Compass
 	Serial.print("Initializing compass:");
 	if (compass_init()) {
 		Serial.println("- compass initialized");
@@ -102,6 +103,15 @@ void setup() {
 	} else {
 		Serial.println("! spectral init failed!");
 	}
+#if MINIMOTE
+	// Particulate matter]
+	Serial.print("Initializing particulate matter sensor:");
+	if (pm_init()) {
+		Serial.println("- pm sensor initialized");
+	} else {
+		Serial.println("! pm sensor init failed!");
+	}
+#endif
 
 #if RIVERMOTE
 	// Bluetooth
@@ -116,6 +126,8 @@ void setup() {
 	Serial.println("Initializing motors:");
 	motors_init();
 	Serial.println("- motors initialized");
+	// Control system
+	control_init();
 
 	// SD card
 	Serial.println("Initializing sd card:");
@@ -148,8 +160,9 @@ double sleepMinutes = 0.5;
 void loop() {
 	flash_beacon(); // beacon light
 #if RIVERMOTE
-	// Bluetooth motor control
+	// Motor control
 	control_handle_input(bluetooth_get_pressed());
+	control_autonomous_mode();
 
 	// If enough time has passed from last log...
 	static unsigned long lastLog = 0;

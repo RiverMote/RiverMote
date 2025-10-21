@@ -1,3 +1,6 @@
 [submodule "lib/SparkFun_MMC5983MA_Magnetometer_Arduino_Library"]
 	path = lib/SparkFun_MMC5983MA_Magnetometer_Arduino_Library
 	url = https://github.com/sparkfun/SparkFun_MMC5983MA_Magnetometer_Arduino_Library
+[submodule "lib/DFRobot_EnvironmentalSensor"]
+	path = lib/DFRobot_EnvironmentalSensor
+	url = https://github.com/DFRobot/DFRobot_EnvironmentalSensor

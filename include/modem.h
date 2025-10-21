@@ -1,9 +1,11 @@
 #pragma once
 
+#include <Arduino.h>
+
 #define LOG_MODEM 0 // Duplicate all modem communications to Serial for debugging
 
 typedef struct ModemGPSData {
-    float lat, lng;
+    double lat, lng;
     float speed;
     float track;
 } ModemGPSData;

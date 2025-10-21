@@ -14,6 +14,11 @@
 // TDS 
 #define PIN_TDS 10
 
+// Air quality (Mini Mote only)
+#define PIN_WIND 11
+#define PIN_GAS1 12
+#define PIN_GAS2 13
+
 // H2O sensors
 #define PIN_H2O1 45
 #define PIN_H2O2 48
@@ -23,7 +28,8 @@
 #define PIN_CDS 8 // blu
 // Flasher LED
 #define PIN_FLASHER 18 // wht
-// Motor pins
+
+// Motor pins (River Mote only)
 #define PIN_MOTOR1_EN 46
 #define PIN_MOTOR2_EN 9
 #define PIN_MOTOR1_FWD 11
@@ -31,6 +37,7 @@
 #define PIN_MOTOR2_FWD 13
 #define PIN_MOTOR2_REV 14
 
+// Board pins
 #define PIN_PMU_SDA 15
 #define PIN_PMU_SCL 7
 #define PIN_PMU_IRQ 6
