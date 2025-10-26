@@ -3,6 +3,8 @@
 #include "sensors/spectral.h"
 
 AS726X sensor;
+static bool initialized = false;
+static SpectralData prevData = {};
 // byte GAIN = 0;
 // byte MEASUREMENT_MODE = 0;
 
@@ -12,8 +14,15 @@ bool spectral_init() {
 }
 
 SpectralData get_spectrum() {
+    if (!initialized) {
+        return prevData;
+    }
+    if (!sensor.dataAvailable()) {
+        return prevData;
+    }
+
     sensor.takeMeasurements();
-    return (SpectralData){
+    prevData = {
         .violet = sensor.getCalibratedViolet(),
         .blue = sensor.getCalibratedBlue(),
         .green = sensor.getCalibratedGreen(),
@@ -21,4 +30,5 @@ SpectralData get_spectrum() {
         .orange = sensor.getCalibratedOrange(),
         .red = sensor.getCalibratedRed(),
     };
+    return prevData;
 }

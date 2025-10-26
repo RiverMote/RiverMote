@@ -81,8 +81,8 @@ ModemGPSData modem_gps_read() {
     ModemGPSData data;
     String raw = modem.getGPSraw();
     // Parse returned data; see page 202 of the above datasheet for field info
-    int parsed = sscanf(raw.c_str(), "%*[^,],%d,%*[^,],%f,%f,%*[^,],%f,%f", &gpsFixed, &data.lat, &data.lng, &data.speed, &data.track);
-    if (parsed != 4) {
+    int parsed = sscanf(raw.c_str(), "%*[^,],%d,%*[^,],%lf,%lf,%*[^,],%f,%f", &gpsFixed, &data.lat, &data.lng, &data.speed, &data.track);
+    if (parsed < 5) {
         data.lat = data.lng = data.speed = data.track = 0.f;
     }
     return data;

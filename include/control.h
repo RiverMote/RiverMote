@@ -25,4 +25,9 @@ void control_handle_input(uint8_t buttons);
  */
 void control_autonomous_mode();
 
+/**
+ * @return true if the current control is in autonomous mode
+ */
+bool control_is_autonomous();
+
 #endif // RIVERMOTE

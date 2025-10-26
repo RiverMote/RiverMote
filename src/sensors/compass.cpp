@@ -4,15 +4,24 @@
 #include "sensors/compass.h"
 
 SFE_MMC5983MA mag;
+static bool magInitialized = false;
 
 bool compass_init() {
     if (!mag.begin()) {
         return false;
     }
-    return mag.softReset();
+    if (!mag.softReset()) {
+        return false;
+    }
+    magInitialized = true;
+    return true;
 }
 
 float compass_read() {
+    if (!magInitialized) {
+        return 0.f;
+    }
+
     uint32_t rawX = 0, rawY = 0, rawZ = 0;
     double scaledX = 0.0, scaledY = 0.0, scaledZ = 0.0;
     double heading = 0.0;

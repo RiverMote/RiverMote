@@ -4,6 +4,7 @@
 #include "sensors/imu.h"
 
 ICM_20948_I2C icm;
+static bool icmInitialized = false;
 static IMUAngles prevAngles = {0.f, 0.f, 0.f};
 
 /**
@@ -52,10 +53,15 @@ bool imu_init() {
     if (!dmpOk) {
         Serial.println("icm dmp init fail");
     }
+    icmInitialized = dmpOk;
     return dmpOk;
 }
 
 IMUAngles imu_read() {
+    if (!icmInitialized) {
+        return prevAngles;
+    }
+
     icm_20948_DMP_data_t data;
     icm.readDMPdataFromFIFO(&data);
     // Ensure read was successful

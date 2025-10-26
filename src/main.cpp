@@ -182,9 +182,9 @@ void loop() {
 			gps.lat, gps.lng, gps.speed, gps.track, compass_read(),
 			temperature, turbidity, tds,
 			spectral.violet, spectral.blue, spectral.green, spectral.yellow, spectral.orange, spectral.red);
-		bluetooth_printf("%.3fV %d%% %.0f%%, %s\n",
+		bluetooth_printf("%.3fV %d%% %.0f%%, %s %s\n",
 						 pmu_get_battery_voltage(), pmu_get_battery_percent(),
-						 motors_get_max_speed() * 100, modem_gps_fixed() ? "GPS FIX" : "NO FIX");
+						 motors_get_max_speed() * 100, control_is_autonomous() ? "A" : "M", modem_gps_fixed() ? "FIX" : "NO FIX");
 		lastLog = millis();
 	}
 #endif

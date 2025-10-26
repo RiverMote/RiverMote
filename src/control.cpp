@@ -124,4 +124,8 @@ void control_autonomous_mode() {
     }
 }
 
+bool control_is_autonomous() {
+	return autonomous;
+}
+
 #endif // RIVERMOTE
