@@ -37,7 +37,7 @@ static void pmu_configure_power_measurement() {
     pmu.enableVbusVoltageMeasure();
     pmu.enableBattVoltageMeasure();
     pmu.enableSystemVoltageMeasure();
-    pmu.fuelGaugeControl(true, true); // Allow PMU to learn the battery curve and save to ROM
+    //pmu.fuelGaugeControl(true, true); // Allow PMU to learn the battery curve and save to ROM
 }
 
 // Configures PMU charging parameters.

@@ -1,27 +1,30 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "sensors/imu.h"
+#include "sensors/air_velocity.h"
+//#include "sensors/compass.h"
+#include "sensors/env.h"
+//#include "sensors/imu.h"
+//#include "sensors/light.h"
+#include "sensors/ozone.h"
+#include "sensors/pm_sensor.h"
+//#include "sensors/spectral.h"
+#include "sensors/tds.h"
 #include "sensors/temp.h"
 #include "sensors/turbidity.h"
-#include "sensors/tds.h"
+
 #include "bluetooth.h"
 #include "control.h"
-#include "flasher.h"
-#include "sensors/compass.h"
-#include "sensors/light.h"
-#include "sensors/pm_sensor.h"
-#include "sensors/spectral.h"
+//#include "flasher.h"
 #include "modem.h"
 #include "motors.h"
 #include "mqtt.h"
 #include "pins.h"
 #include "pmu.h"
 #include "sd.h"
-#include "flasher.h"
 #include "debugging.h"
 
-#define WAIT_FOR_SERIAL 0
+#define WAIT_FOR_SERIAL 1
 
 #define LOG_INTERVAL 1000 // ms between log entries
 #define LOG_HEADER "Millis,Time,Batt%,BattV,Lat,Lng,Speed,Track,Heading,Temp,Turbidity,TDS,SpecViolet,SpecBlue,SpecGreen,SpecYellow,SpecOrange,SpecRed"
@@ -30,7 +33,7 @@ void setup() {
     Serial.begin(115200);
 #if WAIT_FOR_SERIAL
 	while (!Serial);
-	delay(1000);
+	delay(5000);
 #endif
 	Serial.println("Welcome to river mote!");
 
@@ -58,7 +61,12 @@ void setup() {
 	} else {
 		Serial.println("modem gps enable failed!");
 	}
+	// light sensor
+	init_cds();
+	// Flasher
+	flasher_init();
 #endif
+
 #if MINIMOTE
 	// Celluar
 	Serial.println("enabling modem cellular");
@@ -71,10 +79,7 @@ void setup() {
 
 	// Initialize sensors
 	Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_FREQ);
-	// light sensor
-	init_cds();
-	// Flasher
-	flasher_init();
+	
 	// Temperature sensor
 	Serial.print("Initializing temperature sensor:");
 	if (temp_init()) {
@@ -82,6 +87,7 @@ void setup() {
 	} else {
 		Serial.println("! temperature sensor init failed!");
 	}
+	/*
 	// Compass
 	Serial.print("Initializing compass:");
 	if (compass_init()) {
@@ -96,6 +102,7 @@ void setup() {
 	} else {
 		Serial.println("! imu init failed!");
 	}
+		*/
 #if RIVERMOTE
 	// Spectral
 	Serial.print("Initializing spectral:");
@@ -113,6 +120,27 @@ void setup() {
 	} else {
 		Serial.println("! pm sensor init failed!");
 	}
+	// Enviromental sensors
+	if (env_init()) {
+		Serial.println("- env sensorsinitialized");
+	} else {
+		Serial.println("! env sensors init failed!");
+	}
+	// Ozone sensor
+	if (ozone_init){
+		Serial.println("- ozone sensor initialized");
+	} else {
+		Serial.println("! ozone sensor init failed!");
+	}
+	/*
+	// Air speed and velocity
+	if (velo_init){
+		Serial.println("- air velocity initialized");
+	} else {
+		Serial.println("! air velocity init failed!");
+	}
+	*/
+	
 #endif // MINIMOTE
 
 #if RIVERMOTE
@@ -141,6 +169,7 @@ void setup() {
 	// Create new data file
 	sd_create_new(LOG_HEADER);
 #endif // RIVERMOTE
+
 #if MINIMOTE
 	// MQTT
 	Serial.println("Initializing mqtt:");
@@ -159,9 +188,10 @@ long loopMillis;
 double sleepMinutes = 0.5;
 */
 
-void loop() {
-	flash_beacon(); // beacon light
+
+void loop() {	
 #if RIVERMOTE
+	flash_beacon(); // beacon light
 	// Motor control
 	control_handle_input(bluetooth_get_pressed());
 	control_autonomous_mode();
@@ -187,6 +217,19 @@ void loop() {
 						 motors_get_max_speed() * 100, control_is_autonomous() ? "A" : "M", modem_gps_fixed() ? "FIX" : "NO FIX");
 		lastLog = millis();
 	}
+#endif
+
+#if MINIMOTE
+	float temperature = temp_read();
+	float turbidity = get_turbidity();
+	float tds = get_tds(); Serial.println(tds);
+	//EnvData e_data = env_read(); //Serial.println(e_data.tempF);
+	//PMData p_data = pm_read(); //Serial.println(p_data.pm2_5);
+	//float air_velo = velo_read(); Serial.println(air_velo); //-- BROKEN IN LIBRARY --//
+	//double ozone = ozone_read(); Serial.println(ozone);
+	
+	delay(1000);
+
 #endif
 
 	/*

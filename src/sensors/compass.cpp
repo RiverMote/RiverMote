@@ -37,7 +37,7 @@ float compass_read() {
     // https://thecavepearlproject.org/2015/05/22/calibrating-any-compass-or-accelerometer-for-arduino/
     scaledX = (double)rawX - 131072.0;
     scaledX /= 131072.0;
-    scaledY = (double)rawX - 131072.0;
+    scaledY = (double)rawX - 131072.0; // !!! IS THIS SUPPOSED TO BE 'rawY' ???
     scaledY /= 131072.0;
     scaledZ = (double)rawZ - 131072.0;
     scaledZ /= 131072.0;
