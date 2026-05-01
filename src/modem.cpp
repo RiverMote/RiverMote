@@ -2,6 +2,7 @@
 
 #include <HardwareSerial.h>
 #include <string.h>
+#include <time.h>
 #include <TinyGsmClient.h>
 
 #include "pins.h"
@@ -29,6 +30,8 @@ bool modem_init(unsigned long baud, uint max_retries) {
     // Initialize modem serial communication
     Serial1.begin(baud, SERIAL_8N1, PIN_MODEM_RX, PIN_MODEM_TX);
     pinMode(PIN_MODEM_PWR, OUTPUT);
+    pinMode(PIN_MODEM_DTR, OUTPUT);
+    digitalWrite(PIN_MODEM_DTR, LOW);
 
     // Pulse modem power to reset it
     Serial.println("resetting modem");
@@ -46,12 +49,39 @@ bool modem_init(unsigned long baud, uint max_retries) {
         retry++;
     }
     Serial.println();
-    return retry < max_retries;
+    if (retry > max_retries) {
+        return false;
+    }
+
+    // Enable sleep mode via DTR pin
+    return modem.sleepEnable(true);
 }
 
 bool modem_send(const char *cmd, uint32_t timeout) {
     modem.sendAT(cmd);
     return modem.waitResponse(timeout) == 1;
+}
+
+void modem_set_sleep(bool enable) {
+    digitalWrite(PIN_MODEM_DTR, enable);
+    delay(10);
+}
+
+void modem_deinit() {
+    // Disable GPS and cellular if enabled
+    if (gpsEnabled) {
+        gpsEnabled = !modem.disableGPS();
+    }
+    if (modem.isGprsConnected()) {
+        modem.gprsDisconnect();
+    }
+    // Gracefully shut down down, then cut power
+    if (!modem.poweroff()) {
+        Serial.println("WARNING: failed to send modem shutdown, cutting power anyway");
+    }
+    delay(200);
+    digitalWrite(PIN_MODEM_PWR, HIGH);
+    Serial1.end();
 }
 
 /* -- GPS functions -- */
@@ -67,13 +97,6 @@ bool modem_gps_enable() {
 
 bool modem_gps_is_enabled() {
     return gpsEnabled;
-}
-
-bool modem_gps_disable() {
-    if (gpsEnabled) {
-        gpsEnabled = !modem.disableGPS();
-    }
-    return true;
 }
 
 ModemGPSData modem_gps_read() {
@@ -150,7 +173,7 @@ bool modem_cell_enable() {
         Serial.println("GPRS connection failed");
         return false;
     }
-    Serial.printf("activated! IP: %s, signal: %.2f\r\n", modem.getLocalIP().c_str(), modem.getSignalQuality() / 31.f);
+    Serial.printf("activated! IP: %s, signal: %.2f\n", modem.getLocalIP().c_str(), modem.getSignalQuality() / 31.f);
     
     return true;
 }
@@ -159,22 +182,47 @@ bool modem_cell_is_connected() {
     return modem.isGprsConnected();
 }
 
-bool modem_cell_disable() {
-    if (modem.isGprsConnected()) {
-        return modem.gprsDisconnect();
+time_t modem_cell_read_time() {
+    modem_send("+CLTS=1"); // Enable network time synchronization URC
+    // Get individual time components
+    int yyyy = 0, mo = 0, dd = 0, hh = 0, mm = 0, ss = 0;
+    float tz = 0.f; // Timezone offset in hours, either positive or negative from UTC
+    if (!modem.getNetworkTime(&yyyy, &mo, &dd, &hh, &mm, &ss, &tz)) {
+        return 0;
     }
-    return true;
+    // Fill in a tm struct and convert to epoch time
+    tm t = {};
+    t.tm_year = yyyy - 1900;
+    t.tm_mon = mo - 1;
+    t.tm_mday = dd;
+    t.tm_hour = hh;
+    t.tm_min = mm;
+    t.tm_sec = ss;
+    t.tm_isdst = 0;
+    time_t ts = mktime(&t);
+    if (ts <= 0) {
+        return 0;
+    }
+    // Apply timezone correction (the modem returns local time but we want epoch in UTC)
+    ts -= (time_t)(tz * 3600.f); // 3600 seconds in an hour
+    return ts;
 }
 
 /* -- SM (MQTT) functions -- */
 
-bool modem_get_smstate() {
+bool modem_mqtt_is_connected() {
     modem.sendAT("+SMSTATE?");
     if (modem.waitResponse("+SMSTATE: ")) {
         String res = modem.stream.readStringUntil('\r');
         return res.toInt();
     }
     return false;
+}
+
+bool modem_set_mqtt_ssl(bool enable) {
+    char cmd[24];
+    snprintf(cmd, sizeof(cmd), "+SMSSL=%d,\"\",\"\"", enable ? 1 : 0);
+    return modem_send(cmd);
 }
 
 bool modem_send_smpub(const char *cmd, const char *payload, size_t payload_len) {
@@ -186,4 +234,37 @@ bool modem_send_smpub(const char *cmd, const char *payload, size_t payload_len) 
         }
     }
     return false;
+}
+
+bool modem_send_smsub(const char *topic, uint8_t qos) {
+    char cmd[192];
+    snprintf(cmd, sizeof(cmd), "+SMSUB=\"%s\",%u", topic, qos > 1 ? 1 : qos);
+    return modem_send(cmd);
+}
+
+bool modem_read_line(String &line, uint32_t timeout) {
+    line = "";
+    uint32_t start = millis();
+    while ((millis() - start) < timeout || timeout == 0) {
+        while (modem.stream.available()) {
+            char c = modem.stream.read();
+            if (c == '\r') {
+                continue;
+            }
+            if (c == '\n') {
+                line.trim();
+                if (line.length() > 0) {
+                    return true;
+                }
+                continue;
+            }
+            line += c;
+        }
+        if (timeout == 0) {
+            break;
+        }
+        delay(5);
+    }
+    line.trim();
+    return line.length() > 0;
 }

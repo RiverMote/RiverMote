@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdint.h>
+
+#if RIVERMOTE
+
 /**
  * Initialize motor control.
  */
@@ -23,3 +27,5 @@ float motors_get_max_speed();
  * @param speed max speed (0.0 to 1.0)
  */
 void motors_set_max_speed(float speed);
+
+#endif // RIVERMOTE

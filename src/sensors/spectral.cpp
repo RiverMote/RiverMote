@@ -1,6 +1,8 @@
-#include <AS726X.h>
-
 #include "sensors/spectral.h"
+
+#if RIVERMOTE
+
+#include <AS726X.h>
 
 AS726X sensor;
 static bool initialized = false;
@@ -32,3 +34,5 @@ SpectralData get_spectrum() {
     };
     return prevData;
 }
+
+#endif // RIVERMOTE

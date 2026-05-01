@@ -1,6 +1,7 @@
 #pragma once
 
 typedef struct EnvData {
+    // °C, °F, %, UV index?, lux?, hPa
     double tempC, tempF, hum, uv, lum, baro;
 } EnvData;
 

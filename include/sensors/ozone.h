@@ -1,8 +1,12 @@
 #pragma once
 
+/**
+ * Initializes the ozone sensor.
+ * @return true if succesful
+ */
 bool ozone_init();
 
-/* read ozone (0-10ppm)
-original lib deifnes value as int_16t */
-
+/**
+ * @return the ozone concentration in ppm (0-10)
+ */
 double ozone_read();

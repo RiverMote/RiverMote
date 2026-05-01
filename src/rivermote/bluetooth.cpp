@@ -1,4 +1,4 @@
-#include "bluetooth.h"
+#include "rivermote/bluetooth.h"
 
 #if RIVERMOTE
 

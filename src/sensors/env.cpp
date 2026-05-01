@@ -1,19 +1,13 @@
-#include "DFRobot_EnvironmentalSensor.h"
-
 #include "sensors/env.h"
 
-//DFRobot_EnvironmentalSensor environment(/*addr = */SEN050X_DEFAULT_DEVICE_ADDRESS, /*pWire = */&Wire);
+#if MINIMOTE
+
+#include <DFRobot_EnvironmentalSensor.h>
+
 DFRobot_EnvironmentalSensor environment(/*addr = */SEN050X_DEFAULT_DEVICE_ADDRESS);
 
 bool env_init() {
-    if(environment.begin() != 0){
-        //Serial.println(" Sensor initialize failed!!");
-        return false;
-     } else {
-        //Serial.println(" Sensor initialize success!!");
-        return true;
-     }
-    
+    return environment.begin() == 0;
 }
 
 EnvData env_read() {
@@ -23,6 +17,8 @@ EnvData env_read() {
         .hum = environment.getHumidity(),
         .uv = environment.getUltravioletIntensity(eS12SD),
         .lum = environment.getLuminousIntensity(),
-        .baro = environment.getAtmospherePressure(HPA),
+        .baro = static_cast<double>(environment.getAtmospherePressure(HPA)),
     };
 }
+
+#endif // MINIMOTE

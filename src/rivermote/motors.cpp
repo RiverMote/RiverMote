@@ -1,9 +1,11 @@
+#include "rivermote/motors.h"
+
+#if RIVERMOTE
+
 #include <Arduino.h>
 
-#include "bluetooth.h"
+#include "rivermote/bluetooth.h"
 #include "pins.h"
-
-#include "motors.h"
 
 #define MOTORS_FREQ 20000 // PWM frequency in Hz
 #define MOTORS_RES 8 // PWM resolution in bits
@@ -72,3 +74,5 @@ float motors_get_max_speed() {
 void motors_set_max_speed(float speed) {
     maxSpeed = constrain(speed, 0.0f, 1.0f);
 }
+
+#endif // RIVERMOTE

@@ -1,5 +1,7 @@
 #pragma once
 
+#if RIVERMOTE
+
 /**
  * Calculates the bearing between two points.
  * @param latA latitude of the first point
@@ -19,3 +21,5 @@ double calculate_bearing(double latA, double lngA, double latB, double lngB);
  * @return distance in meters
  */
 double calculate_distance(double latA, double lngA, double latB, double lngB);
+
+#endif // RIVERMOTE

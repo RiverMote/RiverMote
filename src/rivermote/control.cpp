@@ -1,14 +1,14 @@
-#include "control.h"
+#include "rivermote/control.h"
 
 #if RIVERMOTE
 
 #include <PID_v1.h>
 
-#include "bluetooth.h"
-#include "modem.h"
-#include "motors.h"
-#include "nav.h"
+#include "rivermote/bluetooth.h"
+#include "rivermote/motors.h"
+#include "rivermote/nav.h"
 #include "sensors/compass.h"
+#include "modem.h"
 
 // Button state tracking
 static bool button1Last = false; // Decrease speed

@@ -4,13 +4,15 @@
 
 #include "pins.h"
 
+#include "pmu.h"
+
 XPowersPMU pmu;
 
 // Configures PMU voltage and current limits.
 static void pmu_configure_limits() {
     pmu.setVbusVoltageLimit(XPOWERS_AXP2101_VBUS_VOL_LIM_4V36); // 4.36V
     pmu.setVbusCurrentLimit(XPOWERS_AXP2101_VBUS_CUR_LIM_1500MA); // 1.5A
-    pmu.setSysPowerDownVoltage(2600); // 2.6V
+    pmu.setSysPowerDownVoltage(2900); // 2.9V
 }
 
 // Configures PMU power rails for peripherals.
@@ -20,15 +22,18 @@ static void pmu_configure_rails() {
         pmu.disableDC3();
         delay(200);
     }
+    pmu_set_sensor_power(true);
     // Modem main power rail
     pmu.setDC3Voltage(3000);
     pmu.enableDC3();
+#if RIVERMOTE
     // GPS antenna power rail
     pmu.setBLDO2Voltage(3300);
     pmu.enableBLDO2();
     // SD card power rail
     pmu.setALDO3Voltage(3300);
     pmu.enableALDO3();
+#endif
 }
 
 // Configures PMU power measurement and battery monitoring.
@@ -37,7 +42,7 @@ static void pmu_configure_power_measurement() {
     pmu.enableVbusVoltageMeasure();
     pmu.enableBattVoltageMeasure();
     pmu.enableSystemVoltageMeasure();
-    //pmu.fuelGaugeControl(true, true); // Allow PMU to learn the battery curve and save to ROM
+    pmu.fuelGaugeControl(true, true); // Allow PMU to learn the battery curve and save to ROM
 }
 
 // Configures PMU charging parameters.
@@ -49,7 +54,7 @@ static void pmu_configure_charging() {
     // Set constant current charge current limit
     pmu.setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_200MA); // 200mA
     // Set stop charging termination current
-    pmu.setChargerTerminationCurr(XPOWERS_AXP2101_CHG_ITERM_25MA); // 25mA
+    pmu.setChargerTerminationCurr(XPOWERS_AXP2101_CHG_ITERM_0MA); // 0mA (disable)
     // Set charge cut-off voltage
     pmu.setChargeTargetVoltage(XPOWERS_AXP2101_CHG_VOL_4V1); // 4.1V
 }
@@ -90,4 +95,24 @@ float pmu_get_battery_voltage() {
         return -1.f;
     }
     return pmu.getBattVoltage() / 1000.f;
+}
+
+float pmu_get_vbus_voltage() {
+    if (!pmu.isVbusIn()) {
+        return 0.0f;
+    }
+    return pmu.getVbusVoltage() / 1000.f;
+}
+
+bool pmu_is_charging() {
+    return pmu.isCharging();
+}
+
+void pmu_set_sensor_power(bool on) {
+    if (on) {
+        pmu.setDC5Voltage(3300);
+        pmu.enableDC5();
+    } else {
+        pmu.disableDC5();
+    }
 }

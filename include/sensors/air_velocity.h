@@ -1,7 +1,12 @@
 #pragma once
 
+/**
+ * Initialize the air velocity sensor.
+ * @return true if initialization was successful
+ */
 bool velo_init();
 
-/* read air velocity */
-
+/**
+ * @return the current air velocity in meters per second
+ */
 float velo_read();
