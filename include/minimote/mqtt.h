@@ -33,7 +33,7 @@ bool mqtt_is_connected();
  * @param payload the message payload
  * @return true if the message was successfully published
  */
-bool mqtt_publish(const char *topic, const char *payload, uint8_t qos = 1, bool retain = true);
+bool mqtt_publish(const char *topic, const char *payload, uint8_t qos = 0, bool retain = false);
 
 /**
  * Subscribe to the given topic.
@@ -42,6 +42,13 @@ bool mqtt_publish(const char *topic, const char *payload, uint8_t qos = 1, bool 
  * @return true if the subscribe command succeeded
  */
 bool mqtt_subscribe(const char *topic, uint8_t qos = 1);
+
+/**
+ * Unsubscribe from the given topic.
+ * @param topic MQTT topic to unsubscribe from
+ * @return true if the unsubscribe command succeeded
+ */
+bool mqtt_unsubscribe(const char *topic);
 
 /**
  * Read one inbound MQTT message from modem stream.

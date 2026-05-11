@@ -6,6 +6,7 @@
 #include <esp_sleep.h>
 #include <time.h>
 
+#include "minimote/comm.h"
 #include "modem.h"
 #include "pmu.h"
 
@@ -21,6 +22,7 @@
  */
 static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     Serial.printf("%s sleeping for %lu sec\n", deep ? "deep" : "light", (unsigned long)sleep_sec);
+    minimote_comm_unsubscribe_control();
     uint64_t sleepUs = (uint64_t)sleep_sec * 1000000ULL;
     if (deep) {
         modem_send("+SMDISC"); // Disconnect from MQTT

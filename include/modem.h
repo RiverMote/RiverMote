@@ -125,6 +125,13 @@ bool modem_send_smpub(const char *cmd, const char *payload, size_t payload_len);
 bool modem_send_smsub(const char *topic, uint8_t qos = 1);
 
 /**
+ * Unsubscribe from an MQTT topic.
+ * @param topic MQTT topic
+ * @return true if the modem accepted the command
+ */
+bool modem_send_smunsub(const char *topic);
+
+/**
  * Read one line from modem stream, including unsolicited MQTT indications.
  * @param line output line, without trailing CR/LF
  * @param timeout time in milliseconds to wait for data

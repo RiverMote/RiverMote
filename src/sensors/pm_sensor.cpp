@@ -5,6 +5,7 @@
 #include <SparkFun_BMV080_Arduino_Library.h>
 
 SparkFunBMV080 bmv080;
+static bool ready = false;
 
 bool pm_init() {
     if (!bmv080.begin()) {
@@ -13,10 +14,14 @@ bool pm_init() {
     if (!bmv080.init()) {
         return false;
     }
-    return bmv080.setMode(SF_BMV080_MODE_CONTINUOUS);
+    ready = bmv080.setMode(SF_BMV080_MODE_CONTINUOUS);
+    return ready;
 }
 
 PMData pm_read() {
+    if (!ready) {
+        return {};
+    }
     bmv080.readSensor();
     return PMData{
         .pm10 = bmv080.PM10(),

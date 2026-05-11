@@ -10,10 +10,10 @@
 #include "modem.h"
 
 // How long to keep the control window open after a publish
-// (how long the server has to send a control message after we publish a sample)
-#define CONTROL_WINDOW_MS 5000
+// (how long we spend with the modem on and waiting for a control message)
+#define CONTROL_WINDOW_MS 2000
 
-void minimote_init() {
+void minimote_init(JsonDocument &initted) {
     Serial.println("enabling modem cellular");
     if (modem_cell_enable()) {
         Serial.println("- modem cellular enabled");
@@ -31,6 +31,12 @@ void minimote_init() {
         Serial.println("! time sync failed, will rely on fallback time");
     }
     Serial.println("- communication established");
+
+    // Report back on which sensors were initialized successfully
+    initted["unix_time"] = time(nullptr);
+    char inittedStr[1024];
+    serializeJson(initted, inittedStr);
+    minimote_comm_publish_init(inittedStr);
 }
 
 void minimote_tick() {

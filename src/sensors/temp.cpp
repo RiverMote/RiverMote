@@ -24,7 +24,7 @@ bool temp_init() {
 
 float temp_read() {
     if (temp.getDeviceCount() == 0) {
-        return 0.f; // No devices to read from
+        return -1.f; // No devices to read from
     }
 
     if (millis() - requestedAt > temp.millisToWaitForConversion()) {

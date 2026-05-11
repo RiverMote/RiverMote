@@ -242,6 +242,12 @@ bool modem_send_smsub(const char *topic, uint8_t qos) {
     return modem_send(cmd);
 }
 
+bool modem_send_smunsub(const char *topic) {
+    char cmd[192];
+    snprintf(cmd, sizeof(cmd), "+SMUNSUB=\"%s\"", topic);
+    return modem_send(cmd);
+}
+
 bool modem_read_line(String &line, uint32_t timeout) {
     line = "";
     uint32_t start = millis();

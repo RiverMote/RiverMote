@@ -136,6 +136,14 @@ bool mqtt_subscribe(const char *topic, uint8_t qos) {
     return modem_send_smsub(topic, qos);
 }
 
+bool mqtt_unsubscribe(const char *topic) {
+    if (!mqtt_is_connected()) {
+        Serial.println("MQTT not connected, can't unsubscribe");
+        return false;
+    }
+    return modem_send_smunsub(topic);
+}
+
 bool mqtt_read_message(String &topic, String &payload, uint32_t timeout) {
     topic = "";
     payload = "";

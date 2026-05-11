@@ -30,9 +30,11 @@
 
 static char endpoint[32];
 static char user[64];
+static char topicInit[64];
 static char topicData[64];
 static char topicControl[64];
 static char topicAck[64];
+static bool controlSubscribed = false;
 
 static bool minimote_handle_control_message(const String &topic, const String &payload) {
     if (topic != String(topicControl)) {
@@ -74,20 +76,17 @@ bool minimote_comm_init() {
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
     snprintf(endpoint, sizeof(endpoint), "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     snprintf(user, sizeof(user), "minimote-%s", endpoint);
+    snprintf(topicInit, sizeof(topicInit), "minimote/%s/init", endpoint);
     snprintf(topicData, sizeof(topicData), "minimote/%s/data", endpoint);
     snprintf(topicControl, sizeof(topicControl), "minimote/%s/control", endpoint);
     snprintf(topicAck, sizeof(topicAck), "minimote/%s/ack", endpoint);
-    Serial.printf("device endpoint=%s user=%s topicData=%s topicControl=%s topicAck=%s\n", endpoint, user, topicData, topicControl, topicAck);
+    Serial.printf("device endpoint=%s user=%s topicInit=%s topicData=%s topicControl=%s topicAck=%s\n", endpoint, user, topicInit, topicData, topicControl, topicAck);
 
     if (!mqtt_init(endpoint, user, MQTT_PASSWORD)) {
         Serial.println("mqtt init failed");
         return false;
     }
-    // Subscribe to the control topic so we can receive commands from the server
-    if (!mqtt_subscribe(topicControl, 1)) {
-        Serial.println("failed to subscribe control topic");
-        return false;
-    }
+    controlSubscribed = false;
     return true;
 }
 
@@ -117,6 +116,9 @@ bool minimote_comm_sync_time() {
 }
 
 void minimote_comm_control_window(uint32_t window) {
+    if (!minimote_comm_subscribe_control()) {
+        return;
+    }
     unsigned long start = millis();
     while (millis() - start < window) {
         // While the control window is open, read messages and check for control commands to execute
@@ -129,6 +131,38 @@ void minimote_comm_control_window(uint32_t window) {
             return;
         }
     }
+}
+
+bool minimote_comm_subscribe_control() {
+    if (controlSubscribed) {
+        return true;
+    }
+    if (!mqtt_is_connected()) {
+        Serial.println("mqtt unavailable for control subscribe");
+        return false;
+    }
+    if (!mqtt_subscribe(topicControl, 1)) {
+        Serial.println("failed to subscribe control topic");
+        return false;
+    }
+    controlSubscribed = true;
+    return true;
+}
+
+bool minimote_comm_unsubscribe_control() {
+    if (!controlSubscribed) {
+        return true;
+    }
+    if (!mqtt_is_connected()) {
+        controlSubscribed = false;
+        return true;
+    }
+    if (!mqtt_unsubscribe(topicControl)) {
+        Serial.println("failed to unsubscribe control topic");
+        return false;
+    }
+    controlSubscribed = false;
+    return true;
 }
 
 bool minimote_comm_publish_sample() {
@@ -149,20 +183,29 @@ bool minimote_comm_publish_sample() {
     double ozone = ozone_read();
     EnvData env = env_read();
     PMData pm = pm_read();
-    time_t now = time(nullptr);
     // Construct JSON payload and publish to MQTT topic
     char payload[1024];
     snprintf(payload, sizeof(payload),
-        "{\"time\":%ld,\"millis\":%lu,\"battery_v\":%.3f,\"battery_pct\":%d,\"vbus\":%.3f,\"charging\":%s,\"water_temp\":%.2f,\"turbidity\":%.2f,\"tds\":%.2f,\"air_velocity\":%.2f,\"ozone\":%.4f,\"air_temp\":%.2f,\"humidity\":%.2f,\"uv\":%.2f,\"lum\":%.2f,\"baro\":%.2f,\"pm1_0\":%.2f,\"pm2_5\":%.2f,\"pm10\":%.2f}",
-        (long)now, millis(),
+        "{\"unix_time\":%ld,\"millis\":%lu,\"battery_v\":%.3f,\"battery_pct\":%d,\"vbus_v\":%.3f,\"charging\":%s,\"water_temp\":%.2f,\"turbidity\":%.2f,\"tds\":%.2f,\"air_velocity\":%.2f,\"ozone\":%.4f,\"air_temp\":%.2f,\"humidity\":%.2f,\"uv\":%.2f,\"lum\":%.2f,\"baro\":%.2f,\"pm1_0\":%.2f,\"pm2_5\":%.2f,\"pm10\":%.2f}",
+        time(nullptr), millis(),
         battV, battPct, vbusV, charging ? "true" : "false",
         temperature, turbidity, tds,
         velo, ozone, env.tempC, env.hum, env.uv, env.lum, env.baro,
         pm.pm1_0, pm.pm2_5, pm.pm10
     );
 
-    bool published = mqtt_publish(topicData, payload, 1, false);
+    bool published = mqtt_publish(topicData, payload);
     Serial.printf("sample publish %s\n", published ? "ok" : "failed");
+    return published;
+}
+
+bool minimote_comm_publish_init(const char *init) {
+    if (!mqtt_is_connected()) {
+        Serial.println("mqtt unavailable for init publish");
+        return false;
+    }
+    bool published = mqtt_publish(topicInit, init);
+    Serial.printf("init publish %s\n", published ? "ok" : "failed");
     return published;
 }
 

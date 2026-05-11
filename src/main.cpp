@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#if MINIMOTE
+#include <ArduinoJson.h>
+#endif
 #include <Wire.h>
 
 #include "minimote/minimote.h"
@@ -21,18 +24,26 @@
 
 #define WAIT_FOR_SERIAL 0
 
+#if MINIMOTE
+JsonDocument initted; // Store init status of sensors to report upon connection
+#endif
+
 /**
- * Helper function to initialize a sensor and print status.
+ * Helper function to initialize a sensor and keep status.
  * @param init_func the sensor's initialization function, which should return true if initialization was successful
  * @param sensor_name the human-readable name of the sensor
  */
 static void init_sensor(bool (*init_func)(), const char *sensor_name) {
     Serial.printf("Initializing %s:\n", sensor_name);
-    if (init_func()) {
+    bool success = init_func();
+    if (success) {
         Serial.printf("- %s initialized\n", sensor_name);
     } else {
         Serial.printf("! %s init failed!\n", sensor_name);
     }
+#if MINIMOTE
+    initted[sensor_name] = success;
+#endif
 }
 
 // Overload of `init_sensor` for void init functions
@@ -40,6 +51,9 @@ static void init_sensor(void (*init_func)(), const char *sensor_name) {
     Serial.printf("Initializing %s:\n", sensor_name);
     init_func();
     Serial.printf("- %s initialized\n", sensor_name);
+#if MINIMOTE
+    initted[sensor_name] = true;
+#endif
 }
 
 void setup() {
@@ -103,7 +117,7 @@ void setup() {
 #endif
 #if MINIMOTE
     // Mini mote-only tasks
-    minimote_init();
+    minimote_init(initted);
 #endif
 
     Serial.println("Ready!");

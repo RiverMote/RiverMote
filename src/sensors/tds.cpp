@@ -11,10 +11,10 @@
 
 #define VREF 3.3      // analog reference voltage of the ADC
 #define SCOUNT  30           // sum of sample point
-int analogBuffer[SCOUNT];    // store the analog value in the array, read from ADC
-int analogBufferTemp[SCOUNT];
-int analogBufferIndex = 0,copyIndex = 0;
-float averageVoltage = 0,tdsValue = 0,temperature = 25;
+static int analogBuffer[SCOUNT];    // store the analog value in the array, read from ADC
+static int analogBufferTemp[SCOUNT];
+static int analogBufferIndex = 0,copyIndex = 0;
+static float averageVoltage = 0,tdsValue = 0,temperature = 25;
 
 void tds_init()
 {
