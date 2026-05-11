@@ -41,6 +41,7 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     esp_light_sleep_start();
     Serial.begin(115200);
     modem_set_sleep(false);
+    minimote_comm_subscribe_control();
 }
 
 void minimote_manage_power() {

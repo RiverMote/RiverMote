@@ -11,7 +11,8 @@
 
 // How long to keep the control window open after a publish
 // (how long we spend with the modem on and waiting for a control message)
-#define CONTROL_WINDOW_MS 2000
+// This exists as a grace period to allow for the modem to process incoming messages
+#define CONTROL_WINDOW_MS 5000
 
 void minimote_init(JsonDocument &initted) {
     Serial.println("enabling modem cellular");

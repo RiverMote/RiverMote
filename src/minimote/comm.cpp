@@ -116,7 +116,7 @@ bool minimote_comm_sync_time() {
 }
 
 void minimote_comm_control_window(uint32_t window) {
-    if (!minimote_comm_subscribe_control()) {
+    if (!controlSubscribed) {
         return;
     }
     unsigned long start = millis();
