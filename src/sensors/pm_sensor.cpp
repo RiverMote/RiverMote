@@ -2,6 +2,18 @@
 
 #if MINIMOTE
 
+#if defined(NO_BMV080)
+
+bool pm_init() {
+    return false;
+}
+
+PMData pm_read() {
+    return {};
+}
+
+#else
+
 #include <SparkFun_BMV080_Arduino_Library.h>
 
 static SparkFunBMV080 bmv080;
@@ -29,5 +41,7 @@ PMData pm_read() {
         .pm1_0 = bmv080.PM1()
     };
 }
+
+#endif // NO_BMV080
 
 #endif // MINIMOTE

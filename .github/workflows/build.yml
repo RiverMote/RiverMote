@@ -23,4 +23,4 @@ jobs:
         run: pip install --upgrade platformio
 
       - name: Build project
-        run: pio run
+        run: pio run -e rivermote -e minimote_ci
