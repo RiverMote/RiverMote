@@ -5,8 +5,8 @@
 
 #include "sensors/temp.h"
 
-OneWire oneWire(PIN_TEMP);
-DallasTemperature temp(&oneWire);
+static OneWire oneWire(PIN_TEMP);
+static DallasTemperature temp(&oneWire);
 static unsigned long requestedAt = 0; // Time when temperature conversion was requested
 static float lastTemp = 0.f;
 

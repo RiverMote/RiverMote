@@ -6,7 +6,7 @@
 
 #define COLLECT_NUMBER 20 // Number of samples to collect for smoothing the data, 1-100
 
-DFRobot_OzoneSensor ozone;
+static DFRobot_OzoneSensor ozone;
 static bool ready = false;
 
 bool ozone_init() {

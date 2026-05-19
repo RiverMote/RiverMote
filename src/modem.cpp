@@ -10,11 +10,12 @@
 
 #if LOG_MODEM
     #include <StreamDebugger.h>
-    StreamDebugger debugger(Serial1, Serial);
-    TinyGsm modem(debugger);
+    static StreamDebugger debugger(Serial1, Serial);
+    static TinyGsm modem(debugger);
 #else
-    TinyGsm modem(Serial1);
+    static TinyGsm modem(Serial1);
 #endif
+TinyGsmClientSecure modemClient(modem);
 
 // 1nce GPRS settings
 #define GPRS_APN "iot.1nce.net"
@@ -51,13 +52,8 @@ bool modem_init(unsigned long baud, uint max_retries) {
     if (retry > max_retries) {
         return false;
     }
-    Serial.print(modem.getModemInfo());
 
     return modem.init();
-}
-
-TinyGsm& modem_get() {
-    return modem;
 }
 
 bool modem_send(const char *cmd, uint32_t timeout) {
@@ -67,10 +63,6 @@ bool modem_send(const char *cmd, uint32_t timeout) {
 
 void modem_set_sleep(bool enable) {
     digitalWrite(PIN_MODEM_DTR, (uint8_t)enable);
-    if (!enable) {
-        // Give the modem a moment to wake up
-        delay(2000);
-    }
 }
 
 void modem_deinit() {
@@ -214,71 +206,4 @@ time_t modem_cell_read_time() {
     // Apply timezone correction (the modem returns local time but we want epoch in UTC)
     ts -= (time_t)(tz * 3600.f); // 3600 seconds in an hour
     return ts;
-}
-
-/* -- SM (MQTT) functions -- */
-
-bool modem_mqtt_is_connected() {
-    modem.sendAT("+SMSTATE?");
-    if (modem.waitResponse("+SMSTATE: ")) {
-        String res = modem.stream.readStringUntil('\r');
-        return res.toInt();
-    }
-    return false;
-}
-
-bool modem_set_mqtt_ssl(bool enable) {
-    char cmd[24];
-    snprintf(cmd, sizeof(cmd), "+SMSSL=%d,\"\",\"\"", enable ? 1 : 0);
-    return modem_send(cmd);
-}
-
-bool modem_send_smpub(const char *cmd, const char *payload, size_t payload_len) {
-    modem.sendAT(cmd);
-    if (modem.waitResponse(">") == 1) {
-        modem.stream.write(payload, payload_len);
-        if (modem.waitResponse(3000)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool modem_send_smsub(const char *topic, uint8_t qos) {
-    char cmd[192];
-    snprintf(cmd, sizeof(cmd), "+SMSUB=\"%s\",%u", topic, qos > 1 ? 1 : qos);
-    return modem_send(cmd);
-}
-
-bool modem_send_smunsub(const char *topic) {
-    char cmd[192];
-    snprintf(cmd, sizeof(cmd), "+SMUNSUB=\"%s\"", topic);
-    return modem_send(cmd);
-}
-
-bool modem_read_line(String &line, uint32_t timeout) {
-    line = "";
-    uint32_t start = millis();
-    while ((millis() - start) < timeout || timeout == 0) {
-        while (modem.stream.available()) {
-            char c = modem.stream.read();
-            if (c == '\r') {
-                continue;
-            }
-            if (c == '\n') {
-                line.trim();
-                if (line.length() > 0) {
-                    return true;
-                }
-                continue;
-            }
-            line += c;
-        }
-        if (timeout == 0) {
-            break;
-        }
-        delay(5);
-    }
-    line.trim();
-    return line.length() > 0;
 }

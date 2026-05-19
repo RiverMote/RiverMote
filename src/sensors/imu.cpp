@@ -3,7 +3,7 @@
 
 #include "sensors/imu.h"
 
-ICM_20948_I2C icm;
+static ICM_20948_I2C icm;
 static bool icmInitialized = false;
 static IMUAngles prevAngles = {0.f, 0.f, 0.f};
 

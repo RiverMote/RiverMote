@@ -4,7 +4,7 @@
 
 #include <DFRobot_EnvironmentalSensor.h>
 
-DFRobot_EnvironmentalSensor environment(/*addr = */SEN050X_DEFAULT_DEVICE_ADDRESS);
+static DFRobot_EnvironmentalSensor environment(/*addr = */SEN050X_DEFAULT_DEVICE_ADDRESS);
 static bool ready = false;
 
 bool env_init() {

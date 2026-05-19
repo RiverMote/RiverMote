@@ -11,8 +11,7 @@
 bool ota_do_update(const char *server, const char *path) {
     Serial.printf("starting update from https://%s%s\n", server, path);
     // Create a HTTP client to fetch the firmware from the server
-    TinyGsmClientSecure client(modem_get());
-    HttpClient http(client, server, 443);
+    HttpClient http(modemClient, server, 443);
     // Create a hook to print current OTA progress
     Update.onProgress([](size_t done, size_t total) {
         if (total == 0) {

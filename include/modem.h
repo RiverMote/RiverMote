@@ -12,6 +12,8 @@ typedef struct ModemGPSData {
     float track;
 } ModemGPSData;
 
+extern TinyGsmClientSecure modemClient;
+
 /* -- General modem functions -- */
 
 /**
@@ -21,11 +23,6 @@ typedef struct ModemGPSData {
  * @return true if the modem was successfully initialized
  */
 bool modem_init(unsigned long baud = 115200, uint max_retries = 10);
-
-/**
- * @return a reference to the underlying modem instance.
- */
-TinyGsm& modem_get();
 
 /**
  * Send an arbitrary AT command to the modem and wait for a response.
@@ -97,50 +94,3 @@ bool modem_cell_is_connected();
  * @return current network time (UTC) as epoch timestamp, or 0 if reading failed
  */
 time_t modem_cell_read_time();
-
-/* -- SM (MQTT) functions -- */
-
-/**
- * Get the current MQTT connection status.
- * @return true if connected
- */
-bool modem_mqtt_is_connected();
-
-/**
- * Enable or disable TLS for the modem's MQTT session.
- * @param enable true to enable TLS, false to disable
- * @return true if the modem accepted the configuration
- */
-bool modem_set_mqtt_ssl(bool enable);
-
-/**
- * Send a +SMPUB command to publish an MQTT message.
- * @param cmd full +SMPUB command string (e.g. +SMPUB=...)
- * @param payload MQTT message payload
- * @param payload_len length of the payload
- * @return true if the message was successfully published
- */
-bool modem_send_smpub(const char *cmd, const char *payload, size_t payload_len);
-
-/**
- * Subscribe to an MQTT topic.
- * @param topic MQTT topic
- * @param qos quality of service (0 or 1)
- * @return true if the modem accepted the command
- */
-bool modem_send_smsub(const char *topic, uint8_t qos = 1);
-
-/**
- * Unsubscribe from an MQTT topic.
- * @param topic MQTT topic
- * @return true if the modem accepted the command
- */
-bool modem_send_smunsub(const char *topic);
-
-/**
- * Read one line from modem stream, including unsolicited MQTT indications.
- * @param line output line, without trailing CR/LF
- * @param timeout time in milliseconds to wait for data
- * @return true if a non-empty line was read
- */
-bool modem_read_line(String &line, uint32_t timeout = 0);

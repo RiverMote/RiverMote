@@ -25,7 +25,7 @@
 #define WAIT_FOR_SERIAL 0
 
 #if MINIMOTE
-JsonDocument initted; // Store init status of sensors to report upon connection
+static JsonDocument initted; // Store init status of sensors to report upon connection
 #endif
 
 /**

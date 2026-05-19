@@ -5,11 +5,11 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <esp_mac.h>
+#include <PubSubClient.h>
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
 
-#include "minimote/mqtt.h"
 #include "minimote/ota.h"
 #include "sensors/air_velocity.h"
 #include "sensors/env.h"
@@ -25,36 +25,43 @@
 #endif
 
 // The below configuration options can be overridden by defining them in secrets.h or elsewhere.
+#ifndef MQTT_BROKER
+    #define MQTT_BROKER ""
+#endif
+#ifndef MQTT_PORT
+    #define MQTT_PORT 1883
+#endif
 #ifndef MQTT_PASSWORD
     #define MQTT_PASSWORD ""
 #endif
+#define MAX_MQTT_PAYLOAD_SIZE 512
+#define TIME_SYNC_INTERVAL_MS 1500000 // How often to sync time, in ms (25 mins)
 
+static PubSubClient mqtt(MQTT_BROKER, MQTT_PORT, modemClient);
 static char endpoint[32], user[64];
 static char topicInit[64], topicData[64], topicControl[64], topicAck[64];
-static bool controlSubscribed = false;
+static unsigned long lastTimeSync = 0;
 
-static bool minimote_comm_ensure_mqtt() {
-    if (mqtt_is_connected()) {
+static bool ensure_mqtt() {
+    if (mqtt.connected()) {
         return true;
     }
     Serial.println("mqtt disconnected, attempting reconnect");
-    if (!mqtt_init(endpoint, user, MQTT_PASSWORD)) {
-        Serial.println("mqtt reconnect failed");
+    if (!mqtt.connect(endpoint, user, MQTT_PASSWORD)) {
+        Serial.println("mqtt connect failed!");
         return false;
     }
-    if (controlSubscribed) {
-        if (!mqtt_subscribe(topicControl, 1)) {
-            Serial.println("failed to resubscribe control topic");
-            controlSubscribed = false;
-            return false;
-        }
+    // Now that we are reconnected, we need to resubscribe to control
+    if (!mqtt.subscribe(topicControl, 1)) {
+        Serial.println("failed to subscribe to control topic!");
+        return false;
     }
     return true;
 }
 
-static bool minimote_handle_control_message(const String &topic, const String &payload) {
-    if (topic != String(topicControl)) {
-        return false;
+static bool handle_control(char *topic, byte *payload, unsigned int len) {
+    if (strcasecmp(topic, topicControl) != 0) {
+        return false; // Not a control message
     }
     // Parse payload and extract command
     JsonDocument doc;
@@ -69,14 +76,14 @@ static bool minimote_handle_control_message(const String &topic, const String &p
     // Acknowledge we received the command
     char ackPayload[192];
     snprintf(ackPayload, sizeof(ackPayload), "{\"ok\":true,\"cmd\":\"%s\"}", cmd);
-    mqtt_publish(topicAck, ackPayload, 1, false);
+    mqtt.publish(topicAck, ackPayload, true);
     delay(500); // Ensure ack is sent
     
     // Execute the command
-    if (strcmp(cmd, "reboot") == 0) {
+    if (strcasecmp(cmd, "reboot") == 0) {
         ESP.restart();
-    } else if (strcmp(cmd, "ota") == 0) {
-        mqtt_deinit(); // Disconnect MQTT so we can connect to HTTP
+    } else if (strcasecmp(cmd, "ota") == 0) {
+        minimote_comm_deinit(); // Deinit so we can connect to HTTP
         if (!ota_do_update(doc["server"].as<const char*>(), doc["path"].as<const char*>())) {
             Serial.println("OTA update failed");
             return false;
@@ -102,18 +109,20 @@ bool minimote_comm_init() {
     snprintf(topicControl, sizeof(topicControl), "minimote/%s/control", endpoint);
     snprintf(topicAck, sizeof(topicAck), "minimote/%s/ack", endpoint);
     Serial.printf("device endpoint=%s user=%s topicInit=%s topicData=%s topicControl=%s topicAck=%s\n", endpoint, user, topicInit, topicData, topicControl, topicAck);
-
-    if (!mqtt_init(endpoint, user, MQTT_PASSWORD)) {
-        Serial.println("mqtt init failed");
-        return false;
-    }
-    controlSubscribed = false;
-    return true;
+    // Connect to MQTT and subscribe to control topic
+    mqtt.setKeepAlive(60);
+    mqtt.setCallback(handle_control);
+    mqtt.setBufferSize(MAX_MQTT_PAYLOAD_SIZE);
+    return ensure_mqtt();
 }
 
-bool minimote_comm_sync_time() {
-    if (time(nullptr) > 1700000000) {
-        // Time is recent, so has been synced
+void minimote_comm_deinit() {
+    mqtt.disconnect();
+}
+
+bool minimote_comm_sync_time(bool force) {
+    if (!force && millis() - lastTimeSync < TIME_SYNC_INTERVAL_MS) {
+        // Time synced recently
         return true;
     }
 
@@ -133,64 +142,44 @@ bool minimote_comm_sync_time() {
     tv.tv_usec = 0;
     settimeofday(&tv, nullptr);
     Serial.printf("time synced, epoch=%ld\n", epoch);
+    lastTimeSync = millis();
     return true;
 }
 
 void minimote_comm_control_window(uint32_t window) {
-    if (!controlSubscribed || !minimote_comm_ensure_mqtt()) {
+    if (!ensure_mqtt()) {
         return;
     }
     unsigned long start = millis();
     while (millis() - start < window) {
-        // While the control window is open, read messages and check for control commands to execute
-        String topic, payload;
-        if (!mqtt_read_message(topic, payload, 150)) {
-            continue;
-        }
-        Serial.printf("control msg topic=%s payload=%s\n", topic.c_str(), payload.c_str());
-        if (minimote_handle_control_message(topic, payload)) {
-            return;
-        }
+        mqtt.loop();
     }
 }
 
 bool minimote_comm_subscribe_control() {
-    if (controlSubscribed) {
-        return true;
-    }
-    if (!minimote_comm_ensure_mqtt()) {
-        Serial.println("mqtt unavailable for control subscribe");
-        return false;
-    }
-    if (!mqtt_subscribe(topicControl, 1)) {
+    if (!mqtt.subscribe(topicControl, 1)) {
         Serial.println("failed to subscribe control topic");
         return false;
     }
-    controlSubscribed = true;
     return true;
 }
 
 bool minimote_comm_unsubscribe_control() {
-    if (!controlSubscribed) {
-        return true;
-    }
-    if (!mqtt_is_connected()) {
-        controlSubscribed = false;
-        return true;
-    }
-    if (!mqtt_unsubscribe(topicControl)) {
+    if (!mqtt.unsubscribe(topicControl)) {
         Serial.println("failed to unsubscribe control topic");
         return false;
     }
-    controlSubscribed = false;
     return true;
 }
 
 bool minimote_comm_publish_sample() {
-    if (!minimote_comm_ensure_mqtt()) {
+    if (!ensure_mqtt()) {
         Serial.println("mqtt unavailable for sample publish");
         return false;
     }
+    // Sync time to ensure our timestamp stays accurate (esp clock can drift)
+    // Do not force sync; we only need to sync periodically and the function can skip if necessary
+    minimote_comm_sync_time(false);
 
     // Harvest all sensor data
     float battV = pmu_get_battery_voltage();
@@ -205,27 +194,27 @@ bool minimote_comm_publish_sample() {
     EnvData env = env_read();
     PMData pm = pm_read();
     // Construct JSON payload and publish to MQTT topic
-    char payload[1024];
+    char payload[512];
     snprintf(payload, sizeof(payload),
-        "{\"unix_time\":%ld,\"millis\":%lu,\"battery_v\":%.3f,\"battery_pct\":%d,\"vbus_v\":%.3f,\"charging\":%s,\"water_temp\":%.2f,\"turbidity\":%.2f,\"tds\":%.2f,\"air_velocity\":%.2f,\"ozone\":%.4f,\"air_temp\":%.2f,\"humidity\":%.2f,\"uv\":%.2f,\"lum\":%.2f,\"baro\":%.2f,\"pm1_0\":%.2f,\"pm2_5\":%.2f,\"pm10\":%.2f}",
+        "{\"unix_time\":%ld,\"millis\":%lu,\"battery_v\":%.3f,\"battery_pct\":%d,\"water_temp\":%.2f,\"turbidity\":%.2f,\"tds\":%.2f,\"air_velocity\":%.2f,\"ozone\":%.4f,\"air_temp\":%.2f,\"humidity\":%.2f,\"uv\":%.2f,\"lum\":%.2f,\"baro\":%.2f,\"pm1_0\":%.2f,\"pm2_5\":%.2f,\"pm10\":%.2f}",
         time(nullptr), millis(),
-        battV, battPct, vbusV, charging ? "true" : "false",
+        battV, battPct,
         temperature, turbidity, tds,
         velo, ozone, env.tempC, env.hum, env.uv, env.lum, env.baro,
         pm.pm1_0, pm.pm2_5, pm.pm10
     );
 
-    bool published = mqtt_publish(topicData, payload);
+    bool published = mqtt.publish(topicData, payload);
     Serial.printf("sample publish %s\n", published ? "ok" : "failed");
     return published;
 }
 
 bool minimote_comm_publish_init(const char *init) {
-    if (!minimote_comm_ensure_mqtt()) {
+    if (!ensure_mqtt()) {
         Serial.println("mqtt unavailable for init publish");
         return false;
     }
-    bool published = mqtt_publish(topicInit, init);
+    bool published = mqtt.publish(topicInit, init);
     Serial.printf("init publish %s\n", published ? "ok" : "failed");
     return published;
 }

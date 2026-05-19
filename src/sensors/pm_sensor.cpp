@@ -4,7 +4,7 @@
 
 #include <SparkFun_BMV080_Arduino_Library.h>
 
-SparkFunBMV080 bmv080;
+static SparkFunBMV080 bmv080;
 static bool ready = false;
 
 bool pm_init() {

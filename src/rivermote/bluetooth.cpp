@@ -2,6 +2,7 @@
 
 #if RIVERMOTE
 
+#include <Arduino.h>
 #include <NimBLEDevice.h>
 #include <stdarg.h>
 
@@ -92,8 +93,8 @@ bool bluetooth_init() {
 	serverTx = service->createCharacteristic(UUID_NUS_TX, NIMBLE_PROPERTY::NOTIFY | NIMBLE_PROPERTY::READ);
 	serverRx = service->createCharacteristic(UUID_NUS_RX, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
 	serverRx->setCallbacks(new RxCallbacks());
-	if (!service->start()) {
-        Serial.println("failed to start NUS service");
+	if (!server->start()) {
+        Serial.println("failed to start bluetooth server");
         return false;
     }
 

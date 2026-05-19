@@ -28,7 +28,7 @@ void minimote_init(JsonDocument &initted) {
         Serial.println("! communication init failed!");
         return;
     }
-    if (!minimote_comm_sync_time()) {
+    if (!minimote_comm_sync_time(true)) {
         Serial.println("! time sync failed, will rely on fallback time");
     }
     Serial.println("- communication established");

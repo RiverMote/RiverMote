@@ -4,7 +4,7 @@
 
 #include <AS726X.h>
 
-AS726X sensor;
+static AS726X sensor;
 static bool initialized = false;
 static SpectralData prevData = {};
 // byte GAIN = 0;

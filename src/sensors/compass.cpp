@@ -3,7 +3,7 @@
 
 #include "sensors/compass.h"
 
-SFE_MMC5983MA mag;
+static SFE_MMC5983MA mag;
 static bool magInitialized = false;
 
 bool compass_init() {

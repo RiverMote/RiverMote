@@ -5,9 +5,14 @@
 #include <Arduino.h>
 #include <esp_sleep.h>
 #include <time.h>
+#include <Wire.h>
 
 #include "minimote/comm.h"
-#include "minimote/mqtt.h"
+#include "pins.h"
+#include "sensors/air_velocity.h"
+#include "sensors/env.h"
+#include "sensors/ozone.h"
+#include "sensors/pm_sensor.h"
 #include "modem.h"
 #include "pmu.h"
 
@@ -17,31 +22,55 @@
 #define SLOT_WINDOW_SEC 120 // How long after the exact publish time slot to consider "within the publish window", in seconds (2 minutes)
 #define FALLBACK_SLEEP_SEC 300 // Fallback sleep duration when time is invalid, in seconds (5 minutes)
 
+// Reinitializes i2c and all sensors connected to it.
+static void reinit_i2c() {
+    Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_FREQ);
+    env_init();
+    ozone_init();
+    velo_init();
+    pm_init();
+}
+
 /**
  * Puts the device to sleep for the specified duration.
  * @note If deep is specified, all peripherals will be powered down and the device will be reset upon wakeup.
  */
 static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     Serial.printf("%s sleeping for %lu sec\n", deep ? "deep" : "light", (unsigned long)sleep_sec);
-    minimote_comm_unsubscribe_control();
     uint64_t sleepUs = (uint64_t)sleep_sec * 1000000ULL;
+
+    // Unsubscribe from control topic as we can't recieve during sleep
+    minimote_comm_unsubscribe_control();
+    // Stop i2c and power down sensors
+    Wire.end();
+    pmu_set_sensor_power(false);
+
     if (deep) {
-        mqtt_deinit();
+        minimote_comm_deinit();
         modem_deinit(); // Disconnect from cell + fully power down modem
-        pmu_set_sensor_power(false); // Cut power to sensors
         esp_sleep_enable_timer_wakeup(sleepUs);
         esp_deep_sleep_start();
         // Deep sleep will reset the device, so code execution will not continue past esp_deep_sleep_start()
         // It will pick back up at setup() after waking up
         return;
     }
-    // Light sleep path
+    
+    // Light sleep path; put modem to sleep and then sleep esp
     modem_set_sleep(true);
     Serial.end();
     esp_sleep_enable_timer_wakeup(sleepUs);
     esp_light_sleep_start();
     Serial.begin(115200);
+
+    // Upon waking up, wake modem and restore sensor power
     modem_set_sleep(false);
+    pmu_set_sensor_power(true);
+    // Allow power to stabilize before reinitializing i2c sensors (analog sensors don't need reinit)
+    delay(50);
+    reinit_i2c();
+    // Give the modem a moment to wake up before we attempt to use it again
+    delay(1000);
+    // Resubscribe to control topic to recieve any commands that were sent while we were asleep
     minimote_comm_subscribe_control();
 }
 

@@ -4,7 +4,7 @@
 
 #include <DFRobot_PAV3000.h>
 
-DFRobot_PAV3000 velo;
+static DFRobot_PAV3000 velo;
 static bool ready = false;
 
 bool velo_init() {
