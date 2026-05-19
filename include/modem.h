@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <time.h>
+#include <TinyGsmClient.h>
 
 #define LOG_MODEM 0 // Duplicate all modem communications to Serial for debugging
 
@@ -20,6 +21,11 @@ typedef struct ModemGPSData {
  * @return true if the modem was successfully initialized
  */
 bool modem_init(unsigned long baud = 115200, uint max_retries = 10);
+
+/**
+ * @return a reference to the underlying modem instance.
+ */
+TinyGsm& modem_get();
 
 /**
  * Send an arbitrary AT command to the modem and wait for a response.

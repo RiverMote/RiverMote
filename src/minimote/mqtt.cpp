@@ -116,6 +116,10 @@ bool mqtt_is_connected() {
     return modem_mqtt_is_connected();
 }
 
+bool mqtt_deinit() {
+    return modem_send("+SMDISC");
+}
+
 bool mqtt_publish(const char *topic, const char *payload, uint8_t qos, bool retain) {
     if (!mqtt_is_connected()) {
         Serial.println("MQTT not connected, can't publish");

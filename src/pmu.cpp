@@ -52,7 +52,7 @@ static void pmu_configure_charging() {
     // Set the precharge charging current
     pmu.setPrechargeCurr(XPOWERS_AXP2101_PRECHARGE_50MA); // 50mA
     // Set constant current charge current limit
-    pmu.setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_200MA); // 200mA
+    pmu.setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_500MA); // 500mA
     // Set stop charging termination current
     pmu.setChargerTerminationCurr(XPOWERS_AXP2101_CHG_ITERM_0MA); // 0mA (disable)
     // Set charge cut-off voltage

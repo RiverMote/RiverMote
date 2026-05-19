@@ -3,7 +3,6 @@
 #include <HardwareSerial.h>
 #include <string.h>
 #include <time.h>
-#include <TinyGsmClient.h>
 
 #include "pins.h"
 
@@ -41,7 +40,7 @@ bool modem_init(unsigned long baud, uint max_retries) {
     delay(1000);
     digitalWrite(PIN_MODEM_PWR, LOW);
 
-    // Wait for the modem to start
+    // Wait for the modem to boot (respond to commands)
     Serial.print("waiting for modem to start");
     uint retry = 0;
     while (!modem.testAT(1000) && retry < max_retries) {
@@ -52,9 +51,13 @@ bool modem_init(unsigned long baud, uint max_retries) {
     if (retry > max_retries) {
         return false;
     }
+    Serial.print(modem.getModemInfo());
 
-    // Enable sleep mode via DTR pin
-    return modem.sleepEnable(true);
+    return modem.init();
+}
+
+TinyGsm& modem_get() {
+    return modem;
 }
 
 bool modem_send(const char *cmd, uint32_t timeout) {
@@ -63,8 +66,11 @@ bool modem_send(const char *cmd, uint32_t timeout) {
 }
 
 void modem_set_sleep(bool enable) {
-    digitalWrite(PIN_MODEM_DTR, enable);
-    delay(10);
+    digitalWrite(PIN_MODEM_DTR, (uint8_t)enable);
+    if (!enable) {
+        // Give the modem a moment to wake up
+        delay(2000);
+    }
 }
 
 void modem_deinit() {
@@ -139,6 +145,8 @@ bool modem_cell_enable() {
 
     modem.setNetworkMode(38); // LTE only
     modem.setPreferredMode(1); // Prefer CAT-M
+    modem_send("+CSGS=2"); // Enable netlight LED control
+    modem_send("+SLEDS=3,100,10000"); // Reduce LED flash interval when connected (10s)
 
     // Register to network
     Serial.print("registering to network (may take a moment)");
@@ -175,7 +183,8 @@ bool modem_cell_enable() {
     }
     Serial.printf("activated! IP: %s, signal: %.2f\n", modem.getLocalIP().c_str(), modem.getSignalQuality() / 31.f);
     
-    return true;
+    // Enable sleep mode via DTR pin
+    return modem.sleepEnable(true);
 }
 
 bool modem_cell_is_connected() {
@@ -183,7 +192,6 @@ bool modem_cell_is_connected() {
 }
 
 time_t modem_cell_read_time() {
-    modem_send("+CLTS=1"); // Enable network time synchronization URC
     // Get individual time components
     int yyyy = 0, mo = 0, dd = 0, hh = 0, mm = 0, ss = 0;
     float tz = 0.f; // Timezone offset in hours, either positive or negative from UTC

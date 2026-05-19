@@ -15,17 +15,15 @@
 bool mqtt_init(const char *client, const char *user, const char *pass);
 
 /**
- * Set MQTT client identity and credentials.
- * @param client_id client identifier sent to broker
- * @param username broker username
- * @param password broker password
- */
-void mqtt_set_identity(const char *client_id, const char *username, const char *password);
-
-/**
  * @return true if MQTT is currently connected
  */
 bool mqtt_is_connected();
+
+/**
+ * Disconnect from MQTT broker.
+ * @return true if successfully disconnected
+ */
+bool mqtt_deinit();
 
 /**
  * Publish a message to the given topic.

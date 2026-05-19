@@ -10,6 +10,7 @@
 #include <time.h>
 
 #include "minimote/mqtt.h"
+#include "minimote/ota.h"
 #include "sensors/air_velocity.h"
 #include "sensors/env.h"
 #include "sensors/ozone.h"
@@ -28,13 +29,28 @@
     #define MQTT_PASSWORD ""
 #endif
 
-static char endpoint[32];
-static char user[64];
-static char topicInit[64];
-static char topicData[64];
-static char topicControl[64];
-static char topicAck[64];
+static char endpoint[32], user[64];
+static char topicInit[64], topicData[64], topicControl[64], topicAck[64];
 static bool controlSubscribed = false;
+
+static bool minimote_comm_ensure_mqtt() {
+    if (mqtt_is_connected()) {
+        return true;
+    }
+    Serial.println("mqtt disconnected, attempting reconnect");
+    if (!mqtt_init(endpoint, user, MQTT_PASSWORD)) {
+        Serial.println("mqtt reconnect failed");
+        return false;
+    }
+    if (controlSubscribed) {
+        if (!mqtt_subscribe(topicControl, 1)) {
+            Serial.println("failed to resubscribe control topic");
+            controlSubscribed = false;
+            return false;
+        }
+    }
+    return true;
+}
 
 static bool minimote_handle_control_message(const String &topic, const String &payload) {
     if (topic != String(topicControl)) {
@@ -49,22 +65,27 @@ static bool minimote_handle_control_message(const String &topic, const String &p
     }
     const char *cmd = doc["cmd"];
     Serial.printf("received control command: %s\n", cmd);
-    if (strcmp(cmd, "reboot") == 0) {
-        // We can't quite reboot yet since we still need to acknowledge the command, so do nothing for now
-    } else if (strcmp(cmd, "ota") == 0) {
-        // TODO: implement OTA update (specify url to download at)
-    } else {
-        Serial.println("unknown control command");
-        return false;
-    }
+    
     // Acknowledge we received the command
     char ackPayload[192];
     snprintf(ackPayload, sizeof(ackPayload), "{\"ok\":true,\"cmd\":\"%s\"}", cmd);
     mqtt_publish(topicAck, ackPayload, 1, false);
-    // Special case for reboot command as specified above
+    delay(500); // Ensure ack is sent
+    
+    // Execute the command
     if (strcmp(cmd, "reboot") == 0) {
-        delay(200); // Ensure ack is sent
         ESP.restart();
+    } else if (strcmp(cmd, "ota") == 0) {
+        mqtt_deinit(); // Disconnect MQTT so we can connect to HTTP
+        if (!ota_do_update(doc["server"].as<const char*>(), doc["path"].as<const char*>())) {
+            Serial.println("OTA update failed");
+            return false;
+        }
+        delay(1000);
+        ESP.restart();
+    } else {
+        Serial.println("unknown control command");
+        return false;
     }
     return true;
 }
@@ -116,7 +137,7 @@ bool minimote_comm_sync_time() {
 }
 
 void minimote_comm_control_window(uint32_t window) {
-    if (!controlSubscribed) {
+    if (!controlSubscribed || !minimote_comm_ensure_mqtt()) {
         return;
     }
     unsigned long start = millis();
@@ -137,7 +158,7 @@ bool minimote_comm_subscribe_control() {
     if (controlSubscribed) {
         return true;
     }
-    if (!mqtt_is_connected()) {
+    if (!minimote_comm_ensure_mqtt()) {
         Serial.println("mqtt unavailable for control subscribe");
         return false;
     }
@@ -166,7 +187,7 @@ bool minimote_comm_unsubscribe_control() {
 }
 
 bool minimote_comm_publish_sample() {
-    if (!mqtt_is_connected()) {
+    if (!minimote_comm_ensure_mqtt()) {
         Serial.println("mqtt unavailable for sample publish");
         return false;
     }
@@ -200,7 +221,7 @@ bool minimote_comm_publish_sample() {
 }
 
 bool minimote_comm_publish_init(const char *init) {
-    if (!mqtt_is_connected()) {
+    if (!minimote_comm_ensure_mqtt()) {
         Serial.println("mqtt unavailable for init publish");
         return false;
     }

@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "minimote/comm.h"
+#include "minimote/mqtt.h"
 #include "modem.h"
 #include "pmu.h"
 
@@ -25,7 +26,7 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     minimote_comm_unsubscribe_control();
     uint64_t sleepUs = (uint64_t)sleep_sec * 1000000ULL;
     if (deep) {
-        modem_send("+SMDISC"); // Disconnect from MQTT
+        mqtt_deinit();
         modem_deinit(); // Disconnect from cell + fully power down modem
         pmu_set_sensor_power(false); // Cut power to sensors
         esp_sleep_enable_timer_wakeup(sleepUs);
