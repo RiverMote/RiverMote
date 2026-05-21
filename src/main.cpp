@@ -7,6 +7,7 @@
 #include "minimote/minimote.h"
 #include "rivermote/rivermote.h"
 #include "sensors/air_velocity.h"
+#include "sensors/chamber.h"
 #include "sensors/compass.h"
 #include "sensors/env.h"
 #include "sensors/imu.h"
@@ -109,6 +110,7 @@ void setup() {
     init_sensor(ozone_init, "ozone sensor");
     init_sensor(velo_init, "air velocity sensor");
     init_sensor(pm_init, "particulate matter sensor");
+    init_sensor(chamber_init, "chamber temp sensor");
 #endif
 
 #if RIVERMOTE

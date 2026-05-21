@@ -18,17 +18,6 @@ int pmu_get_battery_percent();
 float pmu_get_battery_voltage();
 
 /**
- * Get VBUS (solar/USB) voltage.
- * @return voltage in volts, or -1.0 if VBUS is not connected
- */
-float pmu_get_vbus_voltage();
-
-/**
- * @return true if the PMU reports battery is currently charging
- */
-bool pmu_is_charging();
-
-/**
  * Enable or disable power to the sensors.
  * @param on true to enable power, false to disable
  */

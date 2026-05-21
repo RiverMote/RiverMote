@@ -94,17 +94,6 @@ float pmu_get_battery_voltage() {
     return pmu.getBattVoltage() / 1000.f;
 }
 
-float pmu_get_vbus_voltage() {
-    if (!pmu.isVbusIn()) {
-        return 0.0f;
-    }
-    return pmu.getVbusVoltage() / 1000.f;
-}
-
-bool pmu_is_charging() {
-    return pmu.isCharging();
-}
-
 void pmu_set_sensor_power(bool on) {
     if (on) {
         pmu.setDC5Voltage(3300);

@@ -13,6 +13,7 @@
 #include "minimote/ota.h"
 #include "minimote/power.h"
 #include "sensors/air_velocity.h"
+#include "sensors/chamber.h"
 #include "sensors/env.h"
 #include "sensors/ozone.h"
 #include "sensors/pm_sensor.h"
@@ -193,8 +194,6 @@ bool minimote_comm_publish_sample() {
     // Harvest all sensor data
     float battV = pmu_get_battery_voltage();
     int battPct = pmu_get_battery_percent();
-    float vbusV = pmu_get_vbus_voltage();
-    bool charging = pmu_is_charging();
     float temperature = temp_read();
     float turbidity = get_turbidity();
     float tds = get_tds();
@@ -202,15 +201,16 @@ bool minimote_comm_publish_sample() {
     double ozone = ozone_read();
     EnvData env = env_read();
     PMData pm = pm_read();
+    float chamberTemp = chamber_read();
     // Construct JSON payload and publish to MQTT topic
     char payload[512];
     snprintf(payload, sizeof(payload),
-        "{\"unix_time\":%ld,\"millis\":%lu,\"battery_v\":%.3f,\"battery_pct\":%d,\"water_temp\":%.2f,\"turbidity\":%.2f,\"tds\":%.2f,\"air_velocity\":%.2f,\"ozone\":%.4f,\"air_temp\":%.2f,\"humidity\":%.2f,\"uv\":%.2f,\"lum\":%.2f,\"baro\":%.2f,\"pm1_0\":%.2f,\"pm2_5\":%.2f,\"pm10\":%.2f}",
+        "{\"unix_time\":%ld,\"millis\":%lu,\"battery_v\":%.3f,\"battery_pct\":%d,\"water_temp\":%.2f,\"turbidity\":%.2f,\"tds\":%.2f,\"air_velocity\":%.2f,\"ozone\":%.4f,\"air_temp\":%.2f,\"humidity\":%.2f,\"uv\":%.2f,\"lum\":%.2f,\"baro\":%.2f,\"pm1_0\":%.2f,\"pm2_5\":%.2f,\"pm10\":%.2f,\"chamber_temp\":%.2f}",
         time(nullptr), millis(),
         battV, battPct,
         temperature, turbidity, tds,
         velo, ozone, env.tempC, env.hum, env.uv, env.lum, env.baro,
-        pm.pm1_0, pm.pm2_5, pm.pm10
+        pm.pm1_0, pm.pm2_5, pm.pm10, chamberTemp
     );
 
     bool published = mqtt.publish(topicData, payload);

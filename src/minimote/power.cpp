@@ -10,6 +10,7 @@
 #include "minimote/comm.h"
 #include "pins.h"
 #include "sensors/air_velocity.h"
+#include "sensors/chamber.h"
 #include "sensors/env.h"
 #include "sensors/ozone.h"
 #include "sensors/pm_sensor.h"
@@ -31,6 +32,7 @@ static void reinit_i2c() {
     ozone_init();
     velo_init();
     pm_init();
+    chamber_init();
 }
 
 /**
