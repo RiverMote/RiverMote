@@ -91,6 +91,11 @@ bool modem_cell_enable();
 bool modem_cell_is_connected();
 
 /**
+ * @return true if the modem's cellular client connection is currently active (TCP active)
+ */
+bool modem_client_is_connected();
+
+/**
  * @return current network time (UTC) as epoch timestamp, or 0 if reading failed
  */
 time_t modem_cell_read_time();

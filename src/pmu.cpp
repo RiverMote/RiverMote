@@ -23,9 +23,7 @@ static void pmu_configure_rails() {
         delay(200);
     }
     pmu_set_sensor_power(true);
-    // Modem main power rail
-    pmu.setDC3Voltage(3000);
-    pmu.enableDC3();
+    pmu_set_modem_power(true);
 #if RIVERMOTE
     // GPS antenna power rail
     pmu.setBLDO2Voltage(3300);
@@ -113,5 +111,14 @@ void pmu_set_sensor_power(bool on) {
         pmu.enableDC5();
     } else {
         pmu.disableDC5();
+    }
+}
+
+void pmu_set_modem_power(bool on) {
+    if (on) {
+        pmu.setDC3Voltage(3000);
+        pmu.enableDC3();
+    } else {
+        pmu.disableDC3();
     }
 }

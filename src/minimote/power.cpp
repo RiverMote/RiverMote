@@ -17,10 +17,12 @@
 #include "pmu.h"
 
 #define LOW_BATTERY_VOLT 3.55f // Low power mode will be entered under this voltage (~25% for a healthy 18650 cell)
-#define LOW_BATTERY_SLEEP_SEC 3600 // Time to deep sleep when low battery is detected, in seconds (1 hour)
-#define SLOT_SECONDS 900 // Duration to sleep between publish windows, in seconds (15 minutes)
-#define SLOT_WINDOW_SEC 120 // How long after the exact publish time slot to consider "within the publish window", in seconds (2 minutes)
+#define LOW_BATTERY_SLEEP_SEC 7200 // Time to deep sleep when low battery is detected, in seconds (2 hours)
+#define DEFAULT_SLOT_SECONDS 900 // Duration to sleep between publish windows, in seconds (15 minutes). Can be changed by sending a control message
+#define SLOT_WINDOW_PERCENT 0.1 // Percentage ±of the slot duration to consider "still within the window"
 #define FALLBACK_SLEEP_SEC 300 // Fallback sleep duration when time is invalid, in seconds (5 minutes)
+
+static uint32_t slotSec = DEFAULT_SLOT_SECONDS;
 
 // Reinitializes i2c and all sensors connected to it.
 static void reinit_i2c() {
@@ -48,6 +50,7 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     if (deep) {
         minimote_comm_deinit();
         modem_deinit(); // Disconnect from cell + fully power down modem
+        pmu_set_modem_power(false);
         esp_sleep_enable_timer_wakeup(sleepUs);
         esp_deep_sleep_start();
         // Deep sleep will reset the device, so code execution will not continue past esp_deep_sleep_start()
@@ -65,11 +68,10 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     // Upon waking up, wake modem and restore sensor power
     modem_set_sleep(false);
     pmu_set_sensor_power(true);
-    // Allow power to stabilize before reinitializing i2c sensors (analog sensors don't need reinit)
-    delay(50);
+    // Wait a bit before doing anything to allow sensors to boot and modem to wake up (should take 1-1.5s; we're being generous)
+    delay(2000);
+    // Reconnect to i2c sensors
     reinit_i2c();
-    // Give the modem a moment to wake up before we attempt to use it again
-    delay(1000);
     // Resubscribe to control topic to recieve any commands that were sent while we were asleep
     minimote_comm_subscribe_control();
 }
@@ -84,8 +86,8 @@ void minimote_manage_power() {
     // Otherwise, calculate how long to sleep until the next publish window
     time_t now = time(nullptr);
     if (now > 0) {
-        uint32_t offset = (uint32_t)(now % SLOT_SECONDS);
-        minimote_enter_sleep(offset == 0 ? SLOT_SECONDS : (SLOT_SECONDS - offset), false);
+        uint32_t offset = (uint32_t)(now % slotSec);
+        minimote_enter_sleep(offset == 0 ? slotSec : (slotSec - offset), false);
     } else {
         // Invalid time, fallback to a reasonable sleep duration
         minimote_enter_sleep(FALLBACK_SLEEP_SEC, false);
@@ -97,7 +99,11 @@ bool minimote_within_publish_window() {
     if (now <= 0) {
         return true;
     }
-    return (uint32_t)(now % SLOT_SECONDS) < SLOT_WINDOW_SEC;
+    return (uint32_t)(now % slotSec) < (uint32_t)(slotSec * SLOT_WINDOW_PERCENT);
+}
+
+void minimote_set_slot_seconds(uint32_t seconds) {
+    slotSec = seconds;
 }
 
 #endif // MINIMOTE

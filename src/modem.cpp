@@ -15,12 +15,26 @@
 #else
     static TinyGsm modem(Serial1);
 #endif
-TinyGsmClientSecure modemClient(modem);
+TinyGsmClientSecure modemClient(modem); // For external use (exposed in modem.h)
 
 // 1nce GPRS settings
 #define GPRS_APN "iot.1nce.net"
 #define GPRS_USER ""
 #define GPRS_PASS ""
+
+// Extra modem power saving modes
+#define USE_PSM 1
+#if USE_PSM
+    // PSM timer settings (see https://soracom.io/psm-calculation-tool/#tau-value)
+    #define PSM_TAU_SECONDS "00111000" // 24 hours
+    #define PSM_ACTIVE_SECONDS "00001111" // 30 seconds
+    static bool psmEnabled = false;
+#endif
+#define USE_EDRX 0
+#if USE_EDRX
+    #define EDRX_ACT "4" // LTE Cat-M1
+    #define EDRX_CYCLE "0101" // 81.92 seconds
+#endif
 
 static bool gpsEnabled = false, gpsFixed = false;
 
@@ -35,6 +49,7 @@ bool modem_init(unsigned long baud, uint max_retries) {
 
     // Pulse modem power to reset it
     Serial.println("resetting modem");
+    // NOTE: on the T-SIM7080G board, the PWRKEY pin is connected to the MCU through a MMBT3904, which effectively inverts the signal
     digitalWrite(PIN_MODEM_PWR, LOW);
     delay(100);
     digitalWrite(PIN_MODEM_PWR, HIGH);
@@ -63,6 +78,26 @@ bool modem_send(const char *cmd, uint32_t timeout) {
 
 void modem_set_sleep(bool enable) {
     digitalWrite(PIN_MODEM_DTR, (uint8_t)enable);
+#if USE_PSM
+    if (psmEnabled && !enable) {
+        // We are using PSM and want to wake up, so we need to "press" the power button to wake from PSM
+        digitalWrite(PIN_MODEM_PWR, HIGH);
+        delay(1000);
+        digitalWrite(PIN_MODEM_PWR, LOW);
+        // Wait for modem to become responsive
+        while (!modem.testAT(1000));
+        // Wait for network registration
+        SIM70xxRegStatus status;
+        do {
+            status = modem.getRegistrationStatus();
+            delay(1000);
+        } while (status != REG_OK_HOME && status != REG_OK_ROAMING);
+        // Reconnect to GPRS if needed
+        if (!modem.isGprsConnected()) {
+            modem.gprsConnect(GPRS_APN, GPRS_USER, GPRS_PASS);
+        }
+    }
+#endif
 }
 
 void modem_deinit() {
@@ -166,6 +201,18 @@ bool modem_cell_enable() {
         Serial.println("registration failed");
         return false;
     }
+    
+    // Try to request additional network options to reduce power, if enabled
+#if USE_PSM
+    psmEnabled = modem_send("+CPSMS=1,,,\"" PSM_TAU_SECONDS "\",\"" PSM_ACTIVE_SECONDS "\"");
+#else
+    modem_send("+CPSMS=0");
+#endif
+#if USE_EDRX
+    modem_send("+CEDRXS=1," EDRX_ACT ",\"" EDRX_CYCLE "\"");
+#else
+    modem_send("+CEDRXS=0");
+#endif
 
     // Activate GPRS
     Serial.print("activating gprs...");
@@ -181,6 +228,23 @@ bool modem_cell_enable() {
 
 bool modem_cell_is_connected() {
     return modem.isGprsConnected();
+}
+
+bool modem_client_is_connected() {
+    // We cannot use modemClient.connected() directly because TLDR: TinyGSM's impl of SIM7080 does not call AT+CASTATE?
+    // every time and instead can serve stale connection status, so we do our own check to bypass this
+    modem.sendAT("+CASTATE?");
+    if (modem.waitResponse(AT_NL "+CASTATE:") != 1) {
+        return false;
+    }
+    String res = modem.stream.readStringUntil('\n');
+    modem.waitResponse();
+    int cid = 0, state = 0;
+    int parsed = sscanf(res.c_str(), "%d,%d", &cid, &state);
+    if (parsed < 2) {
+        return false;
+    }
+    return state > 0;
 }
 
 time_t modem_cell_read_time() {

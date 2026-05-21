@@ -33,3 +33,9 @@ bool pmu_is_charging();
  * @param on true to enable power, false to disable
  */
 void pmu_set_sensor_power(bool on);
+
+/**
+ * Enable or disable power to the modem.
+ * @param on true to enable power, false to disable
+ */
+void pmu_set_modem_power(bool on);
