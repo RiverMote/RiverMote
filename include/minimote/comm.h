@@ -17,10 +17,9 @@ void minimote_comm_deinit();
 
 /**
  * Syncs the system time with NTP time from the modem.
- * @param force true to sync even if time is already recent
- * @return true if time was successfully synced or is already recent (when not forced), false if there was an error syncing time
+ * @return true if time was successfully synced
  */
-bool minimote_comm_sync_time(bool force);
+bool minimote_comm_sync_time();
 
 /**
  * Opens a control window for the specified duration, during which control messages from the server will be read and executed.

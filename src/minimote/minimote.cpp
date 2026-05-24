@@ -28,7 +28,7 @@ void minimote_init(JsonDocument &initted) {
         Serial.println("! communication init failed!");
         return;
     }
-    if (!minimote_comm_sync_time(true)) {
+    if (!minimote_comm_sync_time()) {
         Serial.println("! time sync failed, will rely on fallback time");
     }
     Serial.println("- communication established");
@@ -41,6 +41,8 @@ void minimote_init(JsonDocument &initted) {
 }
 
 void minimote_tick() {
+    // Sync time to ensure our timestamp stays accurate (esp clock can drift)
+    minimote_comm_sync_time();
     if (minimote_within_publish_window()) {
         // We are within the specified time to publish a sample, so do it and open the control window afterwards
         minimote_comm_publish_sample();

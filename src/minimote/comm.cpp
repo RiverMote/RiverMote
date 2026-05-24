@@ -37,12 +37,10 @@
     #define MQTT_PASSWORD ""
 #endif
 #define MAX_MQTT_PAYLOAD_SIZE 512
-#define TIME_SYNC_INTERVAL_MS 1500000 // How often to sync time, in ms (25 mins)
 
 static PubSubClient mqtt(MQTT_BROKER, MQTT_PORT, modemClient);
 static char endpoint[32], user[64];
 static char topicInit[64], topicData[64], topicControl[64], topicAck[64];
-static unsigned long lastTimeSync = 0;
 
 static bool ensure_mqtt() {
     if (modem_client_is_connected()) {
@@ -61,9 +59,12 @@ static void handle_control(char *topic, byte *payload, unsigned int len) {
     if (strcasecmp(topic, topicControl) != 0) {
         return; // Not a control message
     }
+    if (payload == nullptr || len == 0) {
+        return; // Empty message
+    }
     // Parse payload and extract command
     JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, payload);
+    DeserializationError err = deserializeJson(doc, payload, len);
     if (err || !doc["cmd"].is<const char*>()) {
         Serial.printf("invalid control message json: %s\n", err.c_str());
         return;
@@ -125,13 +126,7 @@ void minimote_comm_deinit() {
     mqtt.disconnect();
 }
 
-bool minimote_comm_sync_time(bool force) {
-    if (!force && millis() - lastTimeSync < TIME_SYNC_INTERVAL_MS) {
-        // Time synced recently
-        return true;
-    }
-
-    // Get NTP from modem
+bool minimote_comm_sync_time() {
     time_t epoch = modem_cell_read_time();
     if (epoch <= 0) {
         Serial.println("failed to sync time");
@@ -142,12 +137,9 @@ bool minimote_comm_sync_time(bool force) {
     }
 
     // Syncronize system clock with NTP time
-    timeval tv;
-    tv.tv_sec = epoch;
-    tv.tv_usec = 0;
+    timeval tv = { .tv_sec = epoch, .tv_usec = 0 };
     settimeofday(&tv, nullptr);
     Serial.printf("time synced, epoch=%ld\n", epoch);
-    lastTimeSync = millis();
     return true;
 }
 
@@ -187,9 +179,6 @@ bool minimote_comm_publish_sample() {
     if (!ensure_mqtt()) {
         return false;
     }
-    // Sync time to ensure our timestamp stays accurate (esp clock can drift)
-    // Do not force sync; we only need to sync periodically and the function can skip if necessary
-    minimote_comm_sync_time(false);
 
     // Harvest all sensor data
     float battV = pmu_get_battery_voltage();

@@ -97,6 +97,8 @@ void modem_set_sleep(bool enable) {
             modem.gprsConnect(GPRS_APN, GPRS_USER, GPRS_PASS);
         }
     }
+#else
+    delay(2000);
 #endif
 }
 

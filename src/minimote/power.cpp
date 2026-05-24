@@ -20,8 +20,7 @@
 #define LOW_BATTERY_VOLT 3.55f // Low power mode will be entered under this voltage (~25% for a healthy 18650 cell)
 #define LOW_BATTERY_SLEEP_SEC 7200 // Time to deep sleep when low battery is detected, in seconds (2 hours)
 #define DEFAULT_SLOT_SECONDS 900 // Duration to sleep between publish windows, in seconds (15 minutes). Can be changed by sending a control message
-#define SLOT_WINDOW_PERCENT 0.1 // Percentage ±of the slot duration to consider "still within the window"
-#define FALLBACK_SLEEP_SEC 300 // Fallback sleep duration when time is invalid, in seconds (5 minutes)
+#define SLOT_WINDOW_PERCENT 0.1f // Percentage ±of the slot duration to consider "still within the window" (symmetric — applies both before and after the boundary)
 
 static uint32_t slotSec = DEFAULT_SLOT_SECONDS;
 
@@ -43,8 +42,9 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     Serial.printf("%s sleeping for %lu sec\n", deep ? "deep" : "light", (unsigned long)sleep_sec);
     uint64_t sleepUs = (uint64_t)sleep_sec * 1000000ULL;
 
-    // Unsubscribe from control topic as we can't recieve during sleep
+    // Unsubscribe from control topic as we can't receive during sleep
     minimote_comm_unsubscribe_control();
+
     // Stop i2c and power down sensors
     Wire.end();
     pmu_set_sensor_power(false);
@@ -59,7 +59,7 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
         // It will pick back up at setup() after waking up
         return;
     }
-    
+
     // Light sleep path; put modem to sleep and then sleep esp
     modem_set_sleep(true);
     Serial.end();
@@ -67,14 +67,14 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     esp_light_sleep_start();
     Serial.begin(115200);
 
-    // Upon waking up, wake modem and restore sensor power
-    modem_set_sleep(false);
+    // Upon waking up, restore sensor power and wake modem
     pmu_set_sensor_power(true);
-    // Wait a bit before doing anything to allow sensors to boot and modem to wake up (should take 1-1.5s; we're being generous)
-    delay(2000);
+    modem_set_sleep(false); // This function takes a while to wake modem, so i2c sensors will be booted by the time it returns
+
     // Reconnect to i2c sensors
     reinit_i2c();
-    // Resubscribe to control topic to recieve any commands that were sent while we were asleep
+
+    // Resubscribe to control topic to receive any commands that were sent while we were asleep
     minimote_comm_subscribe_control();
 }
 
@@ -85,23 +85,33 @@ void minimote_manage_power() {
         Serial.printf("battery low (%.3fV), entering long sleep\n", battV);
         minimote_enter_sleep(LOW_BATTERY_SLEEP_SEC, true);
     }
+
     // Otherwise, calculate how long to sleep until the next publish window
     time_t now = time(nullptr);
     if (now > 0) {
         uint32_t offset = (uint32_t)(now % slotSec);
-        minimote_enter_sleep(offset == 0 ? slotSec : (slotSec - offset), false);
+        // If we are within the trailing edge of the window (i.e. we just published and are still
+        // inside it), sleep a full slot so we don't immediately re enter the window on the next wake
+        uint32_t window = (uint32_t)(slotSec * SLOT_WINDOW_PERCENT);
+        uint32_t sleepSec = (offset < window) ? slotSec : (slotSec - offset);
+        minimote_enter_sleep(sleepSec, false);
     } else {
         // Invalid time, fallback to a reasonable sleep duration
-        minimote_enter_sleep(FALLBACK_SLEEP_SEC, false);
+        minimote_enter_sleep(DEFAULT_SLOT_SECONDS, false);
     }
 }
 
 bool minimote_within_publish_window() {
     time_t now = time(nullptr);
     if (now <= 0) {
+        // If time is invalid, assume we should publish (better to publish too often than miss data)
         return true;
     }
-    return (uint32_t)(now % slotSec) < (uint32_t)(slotSec * SLOT_WINDOW_PERCENT);
+    uint32_t offset = (uint32_t)(now % slotSec);
+    uint32_t window = (uint32_t)(slotSec * SLOT_WINDOW_PERCENT);
+    // Symmetric window: publish if within `window` seconds after the boundary,
+    // or within `window` seconds before the next boundary
+    return offset < window || offset > (slotSec - window);
 }
 
 void minimote_set_slot_seconds(uint32_t seconds) {
