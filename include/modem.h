@@ -40,6 +40,13 @@ bool modem_send(const char *cmd, uint32_t timeout = 1000);
 void modem_set_sleep(bool enable);
 
 /**
+ * Enable or disable PSM (power saving mode), if supported.
+ * @param enable true to enable PSM, false to disable it
+ * @return true if the modem accepted the command
+ */
+bool modem_set_psm(bool enable);
+
+/**
  * Completely deinitialize the modem, including any active connections.
  * After this, the modem will need to be reinitialized with `modem_init()` before it can be used again.
  */

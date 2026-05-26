@@ -82,9 +82,14 @@ static void handle_control(char *topic, byte *payload, unsigned int len) {
     if (strcasecmp(cmd, "reboot") == 0) {
         ESP.restart();
     } else if (strcasecmp(cmd, "ota") == 0) {
-        minimote_comm_deinit(); // Deinit so we can connect to HTTP
+        // Deinit MQTT so we can connect to HTTP
+        minimote_comm_deinit();
+        // Disable modem PSM to ensure it doesn't interfere with the OTA process
+        modem_set_psm(false);
         if (!ota_do_update(doc["server"].as<const char*>(), doc["path"].as<const char*>())) {
             Serial.println("OTA update failed");
+            // OTA failed and we will be returning to this current code, so re-enable PSM to save power
+            modem_set_psm(true);
             return;
         }
         delay(1000);

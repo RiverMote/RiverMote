@@ -76,6 +76,20 @@ bool modem_send(const char *cmd, uint32_t timeout) {
     return modem.waitResponse(timeout) == 1;
 }
 
+bool modem_set_psm(bool enable) {
+#if USE_PSM
+    if (enable) {
+        psmEnabled = modem_send("+CPSMS=1,,,\"" PSM_TAU_SECONDS "\",\"" PSM_ACTIVE_SECONDS "\"");
+        return psmEnabled;
+    }
+    psmEnabled = false;
+    return modem_send("+CPSMS=0");
+#else
+    (void)enable;
+    return true;
+#endif
+}
+
 void modem_set_sleep(bool enable) {
     digitalWrite(PIN_MODEM_DTR, (uint8_t)enable);
 #if USE_PSM
@@ -206,7 +220,7 @@ bool modem_cell_enable() {
     
     // Try to request additional network options to reduce power, if enabled
 #if USE_PSM
-    psmEnabled = modem_send("+CPSMS=1,,,\"" PSM_TAU_SECONDS "\",\"" PSM_ACTIVE_SECONDS "\"");
+    modem_set_psm(true);
 #else
     modem_send("+CPSMS=0");
 #endif
