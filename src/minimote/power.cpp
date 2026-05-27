@@ -98,7 +98,7 @@ void minimote_manage_power() {
         // inside it), sleep a full slot so we don't immediately re enter the window on the next wake
         uint32_t window = (uint32_t)(sampleSlot * SLOT_WINDOW_PERCENT);
         uint32_t sleepSec = (offset < window) ? sampleSlot : (sampleSlot - offset);
-        minimote_enter_sleep(sleepSec - DELAY_AFTER_WAKE_S - DELAY_AFTER_I2C_S, false);
+        minimote_enter_sleep(sleepSec, false);
     } else {
         // Invalid time, fallback to a reasonable sleep duration
         minimote_enter_sleep(PUBLISH_SLOT_SECONDS, false);
