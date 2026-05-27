@@ -3,12 +3,12 @@
 #if MINIMOTE
 
 #include <Arduino.h>
+#include <esp_timer.h>
 #include <esp_sleep.h>
 #include <time.h>
 #include <Wire.h>
 
 #include "minimote/comm.h"
-#include "pins.h"
 #include "sensors/air_velocity.h"
 #include "sensors/chamber.h"
 #include "sensors/env.h"
@@ -29,15 +29,20 @@
 #define DELAY_AFTER_I2C_S 8 // Time to delay after initializing i2c before trying to communicate with sensors, to prevent i2c errors
 // Unfortunately this delay has to be very long due to the environmental sensor taking a long time to read out proper values
 
+#define SLEEP_LOOP_US 1000000 // Duration of time in light sleep mode before waking up to call `sleep_loop()`, in microseconds (1 second)
+
 static uint32_t sampleSlot = SAMPLE_SLOT_SECONDS, pubSlot = PUBLISH_SLOT_SECONDS;
+
+// Loop function to call periodically (every `SLEEP_LOOP_US`) while in light sleep.
+static inline void sleep_loop() {
+    pm_loop();
+}
 
 // Reinitializes i2c and all sensors connected to it.
 static void reinit_i2c() {
-    Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_FREQ);
     env_init();
     ozone_init();
     velo_init();
-    pm_init();
     chamber_init();
     temp_init();
 }
@@ -50,8 +55,6 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     Serial.printf("%s sleeping for %lu sec\n", deep ? "deep" : "light", (unsigned long)sleep_sec);
     uint64_t sleepUs = (uint64_t)sleep_sec * 1000000ULL;
 
-    // Stop i2c and power down sensors
-    Wire.end();
     pmu_set_sensor_power(false);
 
     if (deep) {
@@ -65,11 +68,16 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
         return;
     }
 
-    // Light sleep path; put modem to sleep and then sleep esp
+    // Light sleep path; put modem to sleep and begin our sleep cycle
     modem_set_sleep(true);
     Serial.end();
-    esp_sleep_enable_timer_wakeup(sleepUs);
-    esp_light_sleep_start();
+    // Wake up periodically to call our loop function, and continue this until the sleep duration has fully elapsed
+    uint64_t endUs = esp_timer_get_time() + sleepUs;
+    while (esp_timer_get_time() < endUs) {
+        esp_sleep_enable_timer_wakeup(SLEEP_LOOP_US);
+        esp_light_sleep_start();
+        sleep_loop();
+    }
     Serial.begin(115200);
 
     // Upon waking up, restore sensor power and wake modem

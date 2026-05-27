@@ -45,6 +45,11 @@ PMData pm_read() {
     };
 }
 
+void pm_loop() {
+    // This calls `bmv080_serve_interrupt` internally, which needs to be called once a second in duty cycle mode
+    bmv080.readSensor();
+}
+
 #endif // NO_BMV080
 
 #endif // MINIMOTE

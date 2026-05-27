@@ -18,4 +18,10 @@ bool pm_init();
  */
 PMData pm_read();
 
+/**
+ * Refresh readings for the particulate matter sensor.
+ * @note This function must be called at least once a second to keep processing data.
+ */
+void pm_loop();
+
 #endif // MINIMOTE
