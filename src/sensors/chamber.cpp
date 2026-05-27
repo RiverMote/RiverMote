@@ -12,9 +12,14 @@ bool chamber_init() {
 
 float chamber_read() {
     if (!ready || !temp.dataReady()) {
-        return -1.f;
+        return NAN;
     }
-    return temp.readTempC();
+    float rawTemp = temp.readTempC();
+    if (rawTemp < -40.f || rawTemp > 50.f) {
+        // Invalid temperature reading, likely due to a sensor error; return NAN to indicate this
+        return NAN;
+    }
+    return rawTemp;
 }
 
 #endif // MINIMOTE

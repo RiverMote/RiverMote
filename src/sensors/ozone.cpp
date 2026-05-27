@@ -22,7 +22,7 @@ bool ozone_init() {
 
 double ozone_read() {
     if (!ready) {
-        return -1.0;
+        return NAN;
     }
     return ozone.readOzoneData(COLLECT_NUMBER) / 1000.0; // Convert from ppb to ppm
 }

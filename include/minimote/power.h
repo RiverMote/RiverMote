@@ -15,8 +15,9 @@ void minimote_manage_power();
 bool minimote_within_publish_window();
 
 /**
- * @param seconds the number of seconds between each publish slot to set
+ * @param sample number of seconds between each sample slot to set (or 0 to leave unchanged)
+ * @param publish number of seconds between each publish slot to set (or 0 to leave unchanged)
  */
-void minimote_set_slot_seconds(uint32_t seconds);
+void minimote_set_slot_seconds(uint32_t sample, uint32_t publish);
 
 #endif // MINIMOTE

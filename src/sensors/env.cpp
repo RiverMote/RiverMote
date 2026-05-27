@@ -14,16 +14,22 @@ bool env_init() {
 
 EnvData env_read() {
     if (!ready) {
-        return {};
+        return {NAN, NAN, NAN, NAN, NAN};
     }
-    return (EnvData){
+    EnvData data = {
         .tempC = environment.getTemperature(TEMP_C),
-        .tempF = environment.getTemperature(TEMP_F),
         .hum = environment.getHumidity(),
         .uv = environment.getUltravioletIntensity(eS12SD),
         .lum = environment.getLuminousIntensity(),
-        .baro = static_cast<double>(environment.getAtmospherePressure(HPA)),
+        .baro = static_cast<float>(environment.getAtmospherePressure(HPA)),
     };
+    if (data.tempC < -40.f || data.tempC > 50.f) {
+        data.tempC = NAN;
+    }
+    if (data.hum < 0.f || data.hum > 100.f) {
+        data.hum = NAN;
+    }
+    return data;
 }
 
 #endif // MINIMOTE

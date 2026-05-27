@@ -24,13 +24,17 @@ bool temp_init() {
 
 float temp_read() {
     if (temp.getDeviceCount() == 0) {
-        return -1.f; // No devices to read from
+        return NAN; // No devices to read from
     }
 
     if (millis() - requestedAt > temp.millisToWaitForConversion()) {
         lastTemp = temp.getTempCByIndex(0);
         temp.requestTemperatures();
         requestedAt = millis();
+    }
+    if (lastTemp < -40.f || lastTemp > 50.f) {
+        // Invalid temperature reading, likely due to a sensor error; return NAN to indicate this
+        return NAN;
     }
     return lastTemp;
 }

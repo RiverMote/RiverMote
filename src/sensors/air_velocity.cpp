@@ -16,7 +16,7 @@ bool velo_init() {
 
 float velo_read() {
     if (!ready) {
-        return -1.f;
+        return NAN;
     }
     return velo.readMeterPerSec();
     // return velo.readRaw();

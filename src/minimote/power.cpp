@@ -14,15 +14,22 @@
 #include "sensors/env.h"
 #include "sensors/ozone.h"
 #include "sensors/pm_sensor.h"
+#include "sensors/temp.h"
 #include "modem.h"
 #include "pmu.h"
 
 #define LOW_BATTERY_VOLT 3.55f // Low power mode will be entered under this voltage (~25% for a healthy 18650 cell)
 #define LOW_BATTERY_SLEEP_SEC 7200 // Time to deep sleep when low battery is detected, in seconds (2 hours)
-#define DEFAULT_SLOT_SECONDS 900 // Duration to sleep between publish windows, in seconds (15 minutes). Can be changed by sending a control message
-#define SLOT_WINDOW_PERCENT 0.1f // Percentage ±of the slot duration to consider "still within the window" (symmetric — applies both before and after the boundary)
 
-static uint32_t slotSec = DEFAULT_SLOT_SECONDS;
+#define SAMPLE_SLOT_SECONDS 180 // Duration to sleep between samples, in seconds (3 minutes). Should be an even divisor of PUBLISH_SLOT_SECONDS
+#define PUBLISH_SLOT_SECONDS 900 // Duration to sleep between publish windows, in seconds (15 minutes). Can be changed by sending a control message
+#define SLOT_WINDOW_PERCENT 0.1f // Percentage after the slot duration to consider "still within the window"
+
+#define DELAY_AFTER_WAKE_S 2 // Time to delay after waking up to allow sensors to power on before we try to communicate with them
+#define DELAY_AFTER_I2C_S 8 // Time to delay after initializing i2c before trying to communicate with sensors, to prevent i2c errors
+// Unfortunately this delay has to be very long due to the environmental sensor taking a long time to read out proper values
+
+static uint32_t sampleSlot = SAMPLE_SLOT_SECONDS, pubSlot = PUBLISH_SLOT_SECONDS;
 
 // Reinitializes i2c and all sensors connected to it.
 static void reinit_i2c() {
@@ -32,6 +39,7 @@ static void reinit_i2c() {
     velo_init();
     pm_init();
     chamber_init();
+    temp_init();
 }
 
 /**
@@ -41,9 +49,6 @@ static void reinit_i2c() {
 static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     Serial.printf("%s sleeping for %lu sec\n", deep ? "deep" : "light", (unsigned long)sleep_sec);
     uint64_t sleepUs = (uint64_t)sleep_sec * 1000000ULL;
-
-    // Unsubscribe from control topic as we can't receive during sleep
-    minimote_comm_unsubscribe_control();
 
     // Stop i2c and power down sensors
     Wire.end();
@@ -69,13 +74,12 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
 
     // Upon waking up, restore sensor power and wake modem
     pmu_set_sensor_power(true);
-    modem_set_sleep(false); // This function takes a while to wake modem, so i2c sensors will be booted by the time it returns
-
+    // Give sensors a moment to power up before trying to initialize them
+    delay(DELAY_AFTER_WAKE_S * 1000);
     // Reconnect to i2c sensors
     reinit_i2c();
-
-    // Resubscribe to control topic to receive any commands that were sent while we were asleep
-    minimote_comm_subscribe_control();
+    // Give sensors another moment to get ready before we return to the main loop and take readings
+    delay(DELAY_AFTER_I2C_S * 1000);
 }
 
 void minimote_manage_power() {
@@ -86,18 +90,18 @@ void minimote_manage_power() {
         minimote_enter_sleep(LOW_BATTERY_SLEEP_SEC, true);
     }
 
-    // Otherwise, calculate how long to sleep until the next publish window
+    // Otherwise, calculate how long to sleep until the next sample window
     time_t now = time(nullptr);
     if (now > 0) {
-        uint32_t offset = (uint32_t)(now % slotSec);
+        uint32_t offset = (uint32_t)(now % sampleSlot);
         // If we are within the trailing edge of the window (i.e. we just published and are still
         // inside it), sleep a full slot so we don't immediately re enter the window on the next wake
-        uint32_t window = (uint32_t)(slotSec * SLOT_WINDOW_PERCENT);
-        uint32_t sleepSec = (offset < window) ? slotSec : (slotSec - offset);
-        minimote_enter_sleep(sleepSec, false);
+        uint32_t window = (uint32_t)(sampleSlot * SLOT_WINDOW_PERCENT);
+        uint32_t sleepSec = (offset < window) ? sampleSlot : (sampleSlot - offset);
+        minimote_enter_sleep(sleepSec - DELAY_AFTER_WAKE_S - DELAY_AFTER_I2C_S, false);
     } else {
         // Invalid time, fallback to a reasonable sleep duration
-        minimote_enter_sleep(DEFAULT_SLOT_SECONDS, false);
+        minimote_enter_sleep(PUBLISH_SLOT_SECONDS, false);
     }
 }
 
@@ -107,15 +111,20 @@ bool minimote_within_publish_window() {
         // If time is invalid, assume we should publish (better to publish too often than miss data)
         return true;
     }
-    uint32_t offset = (uint32_t)(now % slotSec);
-    uint32_t window = (uint32_t)(slotSec * SLOT_WINDOW_PERCENT);
-    // Symmetric window: publish if within `window` seconds after the boundary,
-    // or within `window` seconds before the next boundary
-    return offset < window || offset > (slotSec - window);
+    uint32_t offset = (uint32_t)(now % pubSlot);
+    uint32_t window = (uint32_t)(pubSlot * SLOT_WINDOW_PERCENT);
+    // One-sided window: only publish after the boundary, not before
+    // This prevents publishing early on the sample before the publish boundary
+    return offset < window;
 }
 
-void minimote_set_slot_seconds(uint32_t seconds) {
-    slotSec = seconds;
+void minimote_set_slot_seconds(uint32_t sample, uint32_t publish) {
+    if (sample > 0) {
+        sampleSlot = sample;
+    }
+    if (publish > 0) {
+        pubSlot = publish;
+    }
 }
 
 #endif // MINIMOTE

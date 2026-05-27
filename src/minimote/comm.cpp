@@ -12,16 +12,7 @@
 
 #include "minimote/ota.h"
 #include "minimote/power.h"
-#include "sensors/air_velocity.h"
-#include "sensors/chamber.h"
-#include "sensors/env.h"
-#include "sensors/ozone.h"
-#include "sensors/pm_sensor.h"
-#include "sensors/tds.h"
-#include "sensors/temp.h"
-#include "sensors/turbidity.h"
 #include "modem.h"
-#include "pmu.h"
 #if __has_include("secrets.h")
     #include "secrets.h"
 #endif
@@ -36,7 +27,7 @@
 #ifndef MQTT_PASSWORD
     #define MQTT_PASSWORD ""
 #endif
-#define MAX_MQTT_PAYLOAD_SIZE 512
+#define MAX_MQTT_PAYLOAD_SIZE 1024
 
 static PubSubClient mqtt(MQTT_BROKER, MQTT_PORT, modemClient);
 static char endpoint[32], user[64];
@@ -95,12 +86,12 @@ static void handle_control(char *topic, byte *payload, unsigned int len) {
         delay(1000);
         ESP.restart();
     } else if (strcasecmp(cmd, "set_slot") == 0) {
-        if (!doc["seconds"].is<int>()) {
-            return;
+        if (doc["sample"].is<int>()) {
+            minimote_set_slot_seconds(doc["sample"].as<uint32_t>(), 0);
         }
-        uint32_t seconds = doc["seconds"];
-        minimote_set_slot_seconds(seconds);
-        Serial.printf("set slot seconds to %lu\n", seconds);
+        if (doc["publish"].is<int>()) {
+            minimote_set_slot_seconds(0, doc["publish"].as<uint32_t>());
+        }
     } else {
         Serial.println("unknown control command");
         return;
@@ -122,9 +113,7 @@ bool minimote_comm_init() {
     // Connect to MQTT and subscribe to control topic
     mqtt.setKeepAlive(60);
     mqtt.setCallback(handle_control);
-    mqtt.setBufferSize(MAX_MQTT_PAYLOAD_SIZE);
-    // Connect and subscribe to control topic
-    return minimote_comm_subscribe_control();
+    return mqtt.setBufferSize(MAX_MQTT_PAYLOAD_SIZE);
 }
 
 void minimote_comm_deinit() {
@@ -152,62 +141,30 @@ void minimote_comm_control_window(uint32_t window) {
     if (!ensure_mqtt()) {
         return;
     }
+    // Subscribe to receive control messages
+    if (!mqtt.subscribe(topicControl, 1)) {
+        Serial.println("failed to subscribe control topic");
+        return;
+    }
+
+    // Run MQTT loop for the duration of the control window to allow for incoming messages to be processed
     unsigned long start = millis();
     while (millis() - start < window) {
         mqtt.loop();
     }
-}
 
-bool minimote_comm_subscribe_control() {
-    if (!ensure_mqtt()) {
-        return false;
-    }
-    if (!mqtt.subscribe(topicControl, 1)) {
-        Serial.println("failed to subscribe control topic");
-        return false;
-    }
-    return true;
-}
-
-bool minimote_comm_unsubscribe_control() {
-    if (!ensure_mqtt()) {
-        return false;
-    }
+    // Now done, unsubscribe as we will be sleeping shortly and cannot receive messages while asleep
     if (!mqtt.unsubscribe(topicControl)) {
         Serial.println("failed to unsubscribe control topic");
-        return false;
+        return;
     }
-    return true;
 }
 
-bool minimote_comm_publish_sample() {
+bool minimote_comm_publish_sample(const char *sample) {
     if (!ensure_mqtt()) {
         return false;
     }
-
-    // Harvest all sensor data
-    float battV = pmu_get_battery_voltage();
-    int battPct = pmu_get_battery_percent();
-    float temperature = temp_read();
-    float turbidity = get_turbidity();
-    float tds = get_tds();
-    float velo = velo_read();
-    double ozone = ozone_read();
-    EnvData env = env_read();
-    PMData pm = pm_read();
-    float chamberTemp = chamber_read();
-    // Construct JSON payload and publish to MQTT topic
-    char payload[512];
-    snprintf(payload, sizeof(payload),
-        "{\"unix_time\":%ld,\"millis\":%lu,\"battery_v\":%.3f,\"battery_pct\":%d,\"water_temp\":%.2f,\"turbidity\":%.2f,\"tds\":%.2f,\"air_velocity\":%.2f,\"ozone\":%.4f,\"air_temp\":%.2f,\"humidity\":%.2f,\"uv\":%.2f,\"lum\":%.2f,\"baro\":%.2f,\"pm1_0\":%.2f,\"pm2_5\":%.2f,\"pm10\":%.2f,\"chamber_temp\":%.2f}",
-        time(nullptr), millis(),
-        battV, battPct,
-        temperature, turbidity, tds,
-        velo, ozone, env.tempC, env.hum, env.uv, env.lum, env.baro,
-        pm.pm1_0, pm.pm2_5, pm.pm10, chamberTemp
-    );
-
-    bool published = mqtt.publish(topicData, payload);
+    bool published = mqtt.publish(topicData, sample);
     Serial.printf("sample publish %s\n", published ? "ok" : "failed");
     return published;
 }

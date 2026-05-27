@@ -26,14 +26,17 @@ bool pm_init() {
     if (!bmv080.init()) {
         return false;
     }
-    ready = bmv080.setMode(SF_BMV080_MODE_CONTINUOUS);
+    // Take a measurement every 60 seconds in duty cycle mode
+    ready = bmv080.setDutyCyclingPeriod(60);
+    ready &= bmv080.setMode(SF_BMV080_MODE_DUTY_CYCLE);
     return ready;
 }
 
 PMData pm_read() {
     if (!ready) {
-        return {};
+        return {NAN, NAN, NAN};
     }
+    // We ignore the return value of this because it could return false if there is stale data, which is fine-ish
     bmv080.readSensor();
     return PMData{
         .pm10 = bmv080.PM10(),

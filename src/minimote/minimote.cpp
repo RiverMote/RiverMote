@@ -7,6 +7,7 @@
 
 #include "minimote/comm.h"
 #include "minimote/power.h"
+#include "minimote/sample.h"
 #include "modem.h"
 
 // How long to keep the control window open after a publish
@@ -41,13 +42,24 @@ void minimote_init(JsonDocument &initted) {
 }
 
 void minimote_tick() {
-    // Sync time to ensure our timestamp stays accurate (esp clock can drift)
-    minimote_comm_sync_time();
+    // Take sensor readings and accumulate them towards our averages
+    minimote_sample_accumulate();
+
+    // Check if we are within the specified time to publish a sample
     if (minimote_within_publish_window()) {
-        // We are within the specified time to publish a sample, so do it and open the control window afterwards
-        minimote_comm_publish_sample();
+        // We need communication, so wake modem
+        modem_set_sleep(false);
+        // Sync time to ensure our timestamp stays accurate (esp clock can drift)
+        minimote_comm_sync_time();
+
+        char sample[1024];
+        minimote_sample_get(sample, sizeof(sample));
+        minimote_comm_publish_sample(sample);
+        
+        // Keep the control window open for a little while to allow for incoming control messages
         minimote_comm_control_window(CONTROL_WINDOW_MS);
     }
+
     minimote_manage_power();
 }
 
