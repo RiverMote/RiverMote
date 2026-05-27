@@ -12,6 +12,9 @@ PMData pm_read() {
     return {};
 }
 
+void pm_loop() {
+}
+
 #else
 
 #include <SparkFun_BMV080_Arduino_Library.h>
