@@ -16,7 +16,7 @@ bool minimote_comm_init();
 void minimote_comm_deinit();
 
 /**
- * Syncs the system time with NTP time from the modem.
+ * Syncs the system time using modem NTP, falling back to network time if needed.
  * @return true if time was successfully synced
  */
 bool minimote_comm_sync_time();

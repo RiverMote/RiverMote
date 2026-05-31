@@ -264,6 +264,12 @@ bool modem_client_is_connected() {
 }
 
 time_t modem_cell_read_time() {
+    // Request an NTP sync first to update the modem's internal clock
+    byte result = modem.NTPServerSync();
+    if (result != 1) {
+        Serial.printf("ntp sync failed (%s), falling back to modem rtc\n", modem.ShowNTPError(result).c_str());
+    }
+
     // Get individual time components
     int yyyy = 0, mo = 0, dd = 0, hh = 0, mm = 0, ss = 0;
     float tz = 0.f; // Timezone offset in hours, either positive or negative from UTC
