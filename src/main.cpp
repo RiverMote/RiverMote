@@ -60,6 +60,11 @@ void setup() {
 #if WAIT_FOR_SERIAL
     while (!Serial);
     delay(2000);
+    for(int d=0; d<10;d++){
+        Serial.print(".");
+        delay(1000);
+    }
+   Serial.println();
 #endif
 #if RIVERMOTE
     Serial.println("Welcome to River Mote!");
