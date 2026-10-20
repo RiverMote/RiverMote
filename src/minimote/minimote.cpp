@@ -9,6 +9,7 @@
 #include "minimote/power.h"
 #include "minimote/sample.h"
 #include "modem.h"
+#include "pmu.h"
 
 // How long to keep the control window open after a publish
 // (how long we spend with the modem on and waiting for a control message)
@@ -36,6 +37,9 @@ void minimote_init(JsonDocument &initted) {
 
     // Report back on which sensors were initialized successfully
     initted["unix_time"] = time(nullptr);
+    initted["millis"] = millis();
+    initted["battery_v"] = pmu_get_battery_voltage();
+    initted["battery_pct"] = pmu_get_battery_percent();
     char inittedStr[1024];
     serializeJson(initted, inittedStr);
     minimote_comm_publish_init(inittedStr);
