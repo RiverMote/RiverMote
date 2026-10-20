@@ -126,14 +126,14 @@ bool minimote_comm_sync_time() {
         Serial.println("failed to sync time");
         return false;
     } else if (epoch < 1700000000) {
-        Serial.printf("time synced, but seems wrong? (%ld)\n", epoch);
+        Serial.printf("time synced, but seems wrong? (%lld)\n", epoch);
         return false;
     }
 
     // Syncronize system clock with NTP time
     timeval tv = { .tv_sec = epoch, .tv_usec = 0 };
     settimeofday(&tv, nullptr);
-    Serial.printf("time synced, epoch=%ld\n", epoch);
+    Serial.printf("time synced, epoch=%lld\n", epoch);
     return true;
 }
 

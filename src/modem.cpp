@@ -36,7 +36,8 @@ TinyGsmClientSecure modemClient(modem); // For external use (exposed in modem.h)
     #define EDRX_CYCLE "0101" // 81.92 seconds
 #endif
 
-static bool gpsEnabled = false, gpsFixed = false;
+static bool gpsEnabled = false;
+static int gpsFixed = 0;
 
 /* -- General modem functions -- */
 
@@ -161,7 +162,7 @@ ModemGPSData modem_gps_read() {
 }
 
 String modem_gps_read_time() {
-    if (gpsFixed) {
+    if (gpsFixed != 0) {
         String raw = modem.getGPSraw();
         return raw.substring(4, 18); // Position 3 of raw field
     } else {
@@ -171,7 +172,7 @@ String modem_gps_read_time() {
 
 bool modem_gps_fixed() {
     (void)modem_gps_read();
-    return gpsFixed;
+    return gpsFixed != 0;
 }
 
 /* -- Cellular functions -- */

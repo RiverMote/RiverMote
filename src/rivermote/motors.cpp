@@ -18,19 +18,19 @@ static float maxSpeed = 0.f; // Max speed as fraction of full (0.0 to 1.0)
 
 void motors_init() {
     // Create 4 PWM channels for 2 motors (forward and reverse for each)
-    ledcSetup(CHAN_MOTOR1_FWD, MOTORS_FREQ, MOTORS_RES);
-    ledcSetup(CHAN_MOTOR1_REV, MOTORS_FREQ, MOTORS_RES);
-    ledcSetup(CHAN_MOTOR2_FWD, MOTORS_FREQ, MOTORS_RES);
-    ledcSetup(CHAN_MOTOR2_REV, MOTORS_FREQ, MOTORS_RES);
-    // Attach channels to motor control pins
-    ledcAttachPin(PIN_MOTOR1_FWD, CHAN_MOTOR1_FWD);
-    ledcAttachPin(PIN_MOTOR1_REV, CHAN_MOTOR1_REV);
-    ledcAttachPin(PIN_MOTOR2_FWD, CHAN_MOTOR2_FWD);
-    ledcAttachPin(PIN_MOTOR2_REV, CHAN_MOTOR2_REV);
+    bool success = true;
+    success &= ledcAttachChannel(PIN_MOTOR1_FWD, MOTORS_FREQ, MOTORS_RES, CHAN_MOTOR1_FWD);
+    success &= ledcAttachChannel(PIN_MOTOR1_REV, MOTORS_FREQ, MOTORS_RES, CHAN_MOTOR1_REV);
+    success &= ledcAttachChannel(PIN_MOTOR2_FWD, MOTORS_FREQ, MOTORS_RES, CHAN_MOTOR2_FWD);
+    success &= ledcAttachChannel(PIN_MOTOR2_REV, MOTORS_FREQ, MOTORS_RES, CHAN_MOTOR2_REV);
+    if (!success) {
+        return;
+    }
+
     // Enable motors
-    motors_set(0, 0);
     pinMode(PIN_MOTOR1_EN, OUTPUT);
     pinMode(PIN_MOTOR2_EN, OUTPUT);
+    motors_set(0, 0);
     digitalWrite(PIN_MOTOR1_EN, HIGH);
     digitalWrite(PIN_MOTOR2_EN, HIGH);
 }
@@ -43,27 +43,27 @@ void motors_set(int16_t motor1, int16_t motor2) {
     // Motor 1
     if (motor1 > 0) {
         // Positive; forward at given speed
-        ledcWrite(CHAN_MOTOR1_FWD, speed1);
-        ledcWrite(CHAN_MOTOR1_REV, 0);
+        ledcWrite(PIN_MOTOR1_FWD, speed1);
+        ledcWrite(PIN_MOTOR1_REV, 0);
     } else if (motor1 < 0) {
         // Negative; reverse at given speed
-        ledcWrite(CHAN_MOTOR1_FWD, 0);
-        ledcWrite(CHAN_MOTOR1_REV, speed1);
+        ledcWrite(PIN_MOTOR1_FWD, 0);
+        ledcWrite(PIN_MOTOR1_REV, speed1);
     } else {
         // Zero; stop
-        ledcWrite(CHAN_MOTOR1_FWD, 0);
-        ledcWrite(CHAN_MOTOR1_REV, 0);
+        ledcWrite(PIN_MOTOR1_FWD, 0);
+        ledcWrite(PIN_MOTOR1_REV, 0);
     }
     // Motor 2
     if (motor2 > 0) {
-        ledcWrite(CHAN_MOTOR2_FWD, speed2);
-        ledcWrite(CHAN_MOTOR2_REV, 0);
+        ledcWrite(PIN_MOTOR2_FWD, speed2);
+        ledcWrite(PIN_MOTOR2_REV, 0);
     } else if (motor2 < 0) {
-        ledcWrite(CHAN_MOTOR2_FWD, 0);
-        ledcWrite(CHAN_MOTOR2_REV, speed2);
+        ledcWrite(PIN_MOTOR2_FWD, 0);
+        ledcWrite(PIN_MOTOR2_REV, speed2);
     } else {
-        ledcWrite(CHAN_MOTOR2_FWD, 0);
-        ledcWrite(CHAN_MOTOR2_REV, 0);
+        ledcWrite(PIN_MOTOR2_FWD, 0);
+        ledcWrite(PIN_MOTOR2_REV, 0);
     }
 }
 
