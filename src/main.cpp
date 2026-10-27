@@ -21,7 +21,7 @@
 #include "pins.h"
 #include "pmu.h"
 
-#define WAIT_FOR_SERIAL 1
+#define WAIT_FOR_SERIAL 0
 
 #if MINIMOTE
 static JsonDocument initted; // Store init status of sensors to report upon connection

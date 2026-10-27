@@ -2,6 +2,33 @@
 
 #if MINIMOTE
 
+#include <Adafruit_AHTX0.h>
+
+Adafruit_AHTX0 aht;
+Adafruit_Sensor *aht_humidity, *aht_temp;
+
+static bool ready = false;
+
+bool chamber_init() {
+    ready = aht.begin();
+
+    aht_temp = aht.getTemperatureSensor();
+    //aht_temp->printSensorDetails();
+
+    //aht_humidity = aht.getHumiditySensor();
+    //aht_humidity->printSensorDetails();
+
+    return ready;
+}
+
+float chamber_read() {
+    sensors_event_t temp;
+    //aht_humidity->getEvent(&humidity);
+    aht_temp->getEvent(&temp);
+    return temp.temperature;
+}
+
+/*
 #include <SparkFun_TMP117.h>
 
 static TMP117 temp;
@@ -23,5 +50,6 @@ float chamber_read() {
     }
     return rawTemp;
 }
+*/
 
 #endif // MINIMOTE
