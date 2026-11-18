@@ -28,3 +28,8 @@ void pmu_set_sensor_power(bool on);
  * @param on true to enable power, false to disable
  */
 void pmu_set_modem_power(bool on);
+
+// power bus for DC1
+void power_bus_init();
+
+int power_bus_enable();

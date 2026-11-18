@@ -9,6 +9,8 @@
  */
 void minimote_manage_power();
 
+//void minimote_power_bus();
+
 /**
  * @return true if the current time is within the publish window
  */

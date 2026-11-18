@@ -111,3 +111,12 @@ void pmu_set_modem_power(bool on) {
         pmu.disableDC3();
     }
 }
+
+void power_bus_init(){
+    pinMode(PWR_CNTRL, OUTPUT);;
+}
+
+void power_bus_enable(int state){
+    digitalWrite(PWR_CNTRL, 1);
+    //digitalWrite(PWR_CNTRL, state); 
+}
