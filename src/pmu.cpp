@@ -22,6 +22,7 @@ static void pmu_configure_rails() {
         pmu.disableDC3();
         delay(200);
     }
+    pinMode(PWR_CNTRL, OUTPUT);
     pmu_set_sensor_power(true, true);
     pmu_set_modem_power(true);
 #if RIVERMOTE
