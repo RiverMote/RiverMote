@@ -64,7 +64,7 @@ void setup() {
         Serial.print(".");
         delay(1000);
     }
-   Serial.println();
+    Serial.println();
 #endif
 #if RIVERMOTE
     Serial.println("Welcome to River Mote!");

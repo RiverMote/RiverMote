@@ -5,27 +5,27 @@
 #include <Adafruit_AHTX0.h>
 
 Adafruit_AHTX0 aht;
-Adafruit_Sensor *aht_humidity, *aht_temp;
+Adafruit_Sensor *ahtTemp;
 
 static bool ready = false;
 
 bool chamber_init() {
     ready = aht.begin();
-
-    aht_temp = aht.getTemperatureSensor();
-    //aht_temp->printSensorDetails();
-
-    //aht_humidity = aht.getHumiditySensor();
-    //aht_humidity->printSensorDetails();
-
+    if (ready) {
+        ahtTemp = aht.getTemperatureSensor();
+    }
     return ready;
 }
 
 float chamber_read() {
-    sensors_event_t temp;
-    //aht_humidity->getEvent(&humidity);
-    aht_temp->getEvent(&temp);
-    return temp.temperature;
+    sensors_event_t event;
+    ahtTemp->getEvent(&event);
+    float rawTemp = event.temperature;
+    if (rawTemp < -40.f || rawTemp > 50.f) {
+        // Invalid temperature reading, likely due to a sensor error; return NAN to indicate this
+        return NAN;
+    }
+    return rawTemp;
 }
 
 /*

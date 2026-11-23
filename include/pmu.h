@@ -19,17 +19,13 @@ float pmu_get_battery_voltage();
 
 /**
  * Enable or disable power to the sensors.
- * @param on true to enable power, false to disable
+ * @param dc5 true to enable power to the dc5 bus
+ * @param dc1 true to enable power to the dc1 bus
  */
-void pmu_set_sensor_power(bool on);
+void pmu_set_sensor_power(bool dc5, bool dc1);
 
 /**
  * Enable or disable power to the modem.
  * @param on true to enable power, false to disable
  */
 void pmu_set_modem_power(bool on);
-
-// power bus for DC1
-void power_bus_init();
-
-int power_bus_enable();

@@ -9,11 +9,10 @@
 #define PWR_CNTRL 1
 
 // OneWire bus for temperature sensor
-// #define PIN_TEMP 3 // old 2 THREE ALREADY USED!
 #define PIN_TEMP 2
 
 // Turbidity 
-#define PIN_TURBIDITY 18 //
+#define PIN_TURBIDITY 18
 
 // TDS 
 #define PIN_TDS 10

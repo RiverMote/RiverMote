@@ -56,7 +56,8 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     Serial.printf("%s sleeping for %lu sec\n", deep ? "deep" : "light", (unsigned long)sleep_sec);
     uint64_t sleepUs = (uint64_t)sleep_sec * 1000000ULL;
 
-    pmu_set_sensor_power(false);
+    // Always power down dc5, but only power down dc1 during a deep sleep; dc1 has sensors that need continuous power for good readings
+    pmu_set_sensor_power(false, deep ? false : true);
 
     if (deep) {
         minimote_comm_deinit();
@@ -82,7 +83,7 @@ static void minimote_enter_sleep(uint32_t sleep_sec, bool deep) {
     Serial.begin(115200);
 
     // Upon waking up, restore sensor power and wake modem
-    pmu_set_sensor_power(true);
+    pmu_set_sensor_power(true, true);
     // Give sensors a moment to power up before trying to initialize them
     delay(DELAY_AFTER_WAKE_S * 1000);
     // Reconnect to i2c sensors
@@ -95,7 +96,7 @@ void minimote_manage_power() {
     float battV = pmu_get_battery_voltage();
     // If battery voltage is very low, power down as much as we can to conserve energy
     if (battV > 0.f && battV < LOW_BATTERY_VOLT) {
-        Serial.printf("battery low (%.3fV), entering long sleep\n", battV);
+        Serial.printf("battery low (%.3fV), entering deep sleep\n", battV);
         minimote_enter_sleep(LOW_BATTERY_SLEEP_SEC, true);
     }
 

@@ -22,7 +22,7 @@ static void pmu_configure_rails() {
         pmu.disableDC3();
         delay(200);
     }
-    pmu_set_sensor_power(true);
+    pmu_set_sensor_power(true, true);
     pmu_set_modem_power(true);
 #if RIVERMOTE
     // GPS antenna power rail
@@ -94,13 +94,14 @@ float pmu_get_battery_voltage() {
     return pmu.getBattVoltage() / 1000.f;
 }
 
-void pmu_set_sensor_power(bool on) {
-    if (on) {
+void pmu_set_sensor_power(bool dc5, bool dc1) {
+    if (dc5) {
         pmu.setDC5Voltage(3300);
         pmu.enableDC5();
     } else {
         pmu.disableDC5();
     }
+    digitalWrite(PWR_CNTRL, dc1);
 }
 
 void pmu_set_modem_power(bool on) {
@@ -110,13 +111,4 @@ void pmu_set_modem_power(bool on) {
     } else {
         pmu.disableDC3();
     }
-}
-
-void power_bus_init(){
-    pinMode(PWR_CNTRL, OUTPUT);;
-}
-
-void power_bus_enable(int state){
-    digitalWrite(PWR_CNTRL, 1);
-    //digitalWrite(PWR_CNTRL, state); 
 }
